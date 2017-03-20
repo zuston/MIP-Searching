@@ -3,9 +3,7 @@ package io.github.zuston;
 import io.github.zuston.Bean.ConditionsBean;
 import io.github.zuston.Service.BaseService;
 import org.springframework.boot.SpringApplication;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Created by zuston on 17-2-20.
@@ -21,6 +19,11 @@ public class MainController {
 
     }
 
+
+    @RequestMapping(value = "/m/s",method = RequestMethod.GET)
+    public String s(@RequestParam("expression")String expression,@RequestParam("page")int page){
+        return BaseService.getInfo(expression,page);
+    }
 
 
     public static void main(String[] args) {

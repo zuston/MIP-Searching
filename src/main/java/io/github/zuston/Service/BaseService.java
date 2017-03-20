@@ -1,5 +1,6 @@
 package io.github.zuston.Service;
 
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -83,12 +84,90 @@ public class BaseService {
         jsonAppendString.append(totalCount);
         jsonAppendString.append(",\"c\":[");
 
-        for(Document document:mongoColletion.find(condition).skip((page-1)*10).limit(10)){
+        for(Document document:mongoColletion.find(condition).skip((page-1)*20).limit(20)){
 //            JsonObject jsonObject = (JsonObject)r new JsonParser().parse(document.toJson());
 //            System.out.println(document.toJson());
             jsonAppendString.append(document.toJson()).append(",");
         }
         String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
         return jsonStrTemp+"]}";
+    }
+
+    public static String getInfo(String expression, int page) {
+        if (expression.split("7").length>1){
+            BasicDBObject base = new BasicDBObject();
+            BasicDBList co = new BasicDBList();
+            for (String str:expression.split("7")){
+                co.add(BaseService.getInfoAnd(str,page));
+            }
+
+            base.put("$or",co);
+
+            return BaseService.resAppend(base,page);
+
+        }
+        return BaseService.resAppend(BaseService.getInfoAnd(expression,page),page);
+    }
+
+    private static BasicDBObject getInfoAnd(String expression, int page) {
+        ArrayList<String> elementList = new ArrayList<String>();
+        Double bandGap = null;
+        String spaceGroup = null;
+        for(String str:expression.split("9")){
+            if(str.length()<3){
+                elementList.add(str);
+            }else{
+                if (str.indexOf("bandgap")>=0){
+                    String temp = str.split("=")[1];
+                    bandGap = Double.valueOf(temp.substring(0,temp.length()-1));
+                }
+                if (str.indexOf("spacegroup")>=0){
+                    String temp = str.split("=")[1];
+                    spaceGroup = String.valueOf(temp.substring(0,temp.length()-1));
+                }
+            }
+        }
+        BasicDBObject condition = new BasicDBObject();
+
+        if (elementList.size()>0){
+            condition.put("poscar.structure.sites.label",new BasicDBObject("$all",elementList));
+        }
+
+
+        if (bandGap!=null){
+            condition.put("caculate.Band_Gap",bandGap);
+        }
+        if (spaceGroup!=null){
+            condition.put("caculate.Spacegroup",spaceGroup);
+        }
+
+        return condition;
+    }
+
+    private static String resAppend(BasicDBObject base,int page){
+        long totalCount = mongoColletion.count(base);
+
+        StringBuilder jsonAppendString = new StringBuilder("{\"cpage\":");
+        jsonAppendString.append(page);
+        jsonAppendString.append(",\"count\":");
+        jsonAppendString.append(totalCount);
+        jsonAppendString.append(",\"c\":[");
+
+        boolean flag = false;
+        for(Document document:mongoColletion.find(base).skip((page-1)*20).limit(20)){
+            jsonAppendString.append(document.toJson()).append(",");
+            flag = true;
+        }
+        if (flag==true){
+            String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
+            return jsonStrTemp+"]}";
+        }
+        return jsonAppendString+"]}";
+    }
+
+    public static void main(String[] args) {
+        String str = "(bang=1)";
+        String [] str2 = str.split("7");
+        System.out.println(str2.length);
     }
 }
