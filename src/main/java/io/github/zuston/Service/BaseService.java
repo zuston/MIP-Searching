@@ -2,14 +2,19 @@ package io.github.zuston.Service;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
+import com.mongodb.QueryOperators;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
 import io.github.zuston.Util.MongoDb;
+import io.github.zuston.Util.RaceMapper;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
@@ -94,26 +99,85 @@ public class BaseService {
     }
 
     public static String getInfo(String expression, int page) {
-        if (expression.split("7").length>1){
-            BasicDBObject base = new BasicDBObject();
-            BasicDBList co = new BasicDBList();
-            for (String str:expression.split("7")){
-                co.add(BaseService.getInfoAnd(str,page));
-            }
+//        if (expression.split("|").length>1){
+//            BasicDBObject base = new BasicDBObject();
+//            BasicDBList co = new BasicDBList();
+//            for (String str:expression.split("7")){
+////                co.add(BaseService.getInfoAnd(str,page));
+//                co.add(getInfoComplex(str,page));
+//            }
+//
+//            base.put("$or",co);
+//
+//            return BaseService.resAppend(base,page);
+//        }
+        return BaseService.resAppend(BaseService.getInfoComplex(expression,page),page);
+    }
 
-            base.put("$or",co);
-
-            return BaseService.resAppend(base,page);
-
+    //增加族系复合搜索
+    private static BasicDBObject getInfoComplex(String expression,int page){
+        ArrayList<String> race = RaceMapper.race;
+        // 和的列表，其中又分bandGAP 单元素 族系元素
+        ArrayList<String> andList = indexArr(expression,'&');
+        // 否的列表，其中分为族系元素
+        ArrayList<String> notList = indexArr(expression,'~');
+        if (andList.size()<=0){
+            return null;
         }
-        return BaseService.resAppend(BaseService.getInfoAnd(expression,page),page);
+
+        ArrayList<String> andShackList = new ArrayList<String>();
+        ArrayList<String> andWaitList = new ArrayList<String>();
+
+        Double bandGap = null;
+        String spaceGroup = null;
+        for (String temp:andList){
+            if (race.indexOf(temp)>-1){
+                andWaitList.add(temp);
+            }else if (temp.indexOf("bandgap")>=0){
+                String t = temp.split("=")[1];
+                bandGap = Double.valueOf(t.substring(0,t.length()-1));
+            }else if (temp.indexOf("spacegroup")>=0){
+                String t = temp.split("=")[1];
+                spaceGroup = String.valueOf(t.substring(0,t.length()-1));
+            }else{
+                andShackList.add(temp);
+            }
+        }
+        System.out.println(bandGap);
+
+        BasicDBObject condition = new BasicDBObject();
+        BasicDBObject conditionChildren = new BasicDBObject();
+        if (andShackList.size()>0){
+            conditionChildren.append("$all",andShackList);
+        }
+
+        if (andWaitList.size()>0){
+            for (String key:andWaitList){
+                conditionChildren.append("$in",RaceMapper.hm.get(key));
+            }
+        }
+
+        if (bandGap!=null){
+            condition.put("caculate.Band_Gap",new BasicDBObject().append("$eq",bandGap));
+        }
+        if (spaceGroup!=null){
+            condition.put("caculate.Spacegroup",spaceGroup);
+        }
+        if (notList.size()>0){
+            for (String key:notList){
+                conditionChildren.append(QueryOperators.NIN,RaceMapper.hm.get(key));
+            }
+        }
+        condition.put("poscar.structure.sites.label",conditionChildren);
+        System.out.println(condition);
+        return condition;
     }
 
     private static BasicDBObject getInfoAnd(String expression, int page) {
         ArrayList<String> elementList = new ArrayList<String>();
         Double bandGap = null;
         String spaceGroup = null;
-        for(String str:expression.split("9")){
+        for(String str:expression.split("&")){
             if(str.length()<3){
                 elementList.add(str);
             }else{
@@ -154,7 +218,7 @@ public class BaseService {
         jsonAppendString.append(",\"c\":[");
 
         boolean flag = false;
-        for(Document document:mongoColletion.find(base).skip((page-1)*20).limit(20)){
+        for(Document document:mongoColletion.find(base).skip((page-1)*10).limit(10)){
             jsonAppendString.append(document.toJson()).append(",");
             flag = true;
         }
@@ -166,8 +230,36 @@ public class BaseService {
     }
 
     public static void main(String[] args) {
-        String str = "(bang=1)";
-        String [] str2 = str.split("7");
-        System.out.println(str2.length);
+        String str = "H&Li&2A~3B";
+       getInfoComplex(str,1);
+    }
+
+    // 根据符号筛选出条件
+    private static ArrayList<String> indexArr(String str,char tag){
+        ArrayList<String> res = new ArrayList<String>();
+        char [] s = str.toCharArray();
+        int flag = -1;
+        for(int i=0;i<s.length;i++){
+            if (s[i]==tag){
+                if (i==1){
+                    flag = 0;
+                }
+                String sb = "";
+                for (int j=i+1;j<s.length;j++){
+                    if (s[j]!='&'&&s[j]!='|'&&s[j]!='~'){
+                        sb+=s[j];
+                    }else{
+                        break;
+                    }
+                }
+                if (!sb.equals("")){
+                    res.add(sb);
+                }
+            }
+        }
+        if (flag==0){
+            res.add(String.valueOf(s[flag]));
+        }
+        return res;
     }
 }

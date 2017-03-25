@@ -22,6 +22,7 @@ public class MainController {
 
     @RequestMapping(value = "/m/s",method = RequestMethod.GET)
     public String s(@RequestParam("expression")String expression,@RequestParam("page")int page){
+        System.out.println(expression);
         return BaseService.getInfo(expression,page);
     }
 
