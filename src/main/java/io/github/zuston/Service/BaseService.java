@@ -2,9 +2,12 @@ package io.github.zuston.Service;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
 import com.mongodb.QueryOperators;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.sun.tools.javah.Util;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
 import io.github.zuston.Util.MongoDb;
@@ -27,6 +30,7 @@ public class BaseService {
     public static MongoDatabase mongoDataBase = MongoDb.getInstance();
     public static MongoCollection<Document> mongoColletion = mongoDataBase.getCollection("vasp_input");
 
+    public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("dumplicate_conditions");
 
     public static String getInfo(ConditionsBean conditionsBean) {
 
@@ -99,25 +103,26 @@ public class BaseService {
     }
 
     public static String getInfo(String expression, int page) {
-//        if (expression.split("|").length>1){
-//            BasicDBObject base = new BasicDBObject();
-//            BasicDBList co = new BasicDBList();
-//            for (String str:expression.split("7")){
-////                co.add(BaseService.getInfoAnd(str,page));
-//                co.add(getInfoComplex(str,page));
-//            }
-//
-//            base.put("$or",co);
-//
-//            return BaseService.resAppend(base,page);
-//        }
+        if (expression.split("\\|").length>1){
+            BasicDBObject base = new BasicDBObject();
+            BasicDBList co = new BasicDBList();
+            for (String str:expression.split("\\|")){
+                co.add(getInfoComplex(str,page));
+            }
+
+            base.put("$or",co);
+            return BaseService.resAppend(base,page);
+        }
         return BaseService.resAppend(BaseService.getInfoComplex(expression,page),page);
     }
 
     //增加族系复合搜索
     private static BasicDBObject getInfoComplex(String expression,int page){
-        ArrayList<String> race = RaceMapper.race;
+        System.out.println(expression);
+        ArrayList<String> race = new ArrayList<String>();
+        race.addAll(RaceMapper.race);
         // 和的列表，其中又分bandGAP 单元素 族系元素
+        // TODO: 17/3/27 单元素可能会报错
         ArrayList<String> andList = indexArr(expression,'&');
         // 否的列表，其中分为族系元素
         ArrayList<String> notList = indexArr(expression,'~');
@@ -130,6 +135,7 @@ public class BaseService {
 
         Double bandGap = null;
         String spaceGroup = null;
+        System.out.println(andList);
         for (String temp:andList){
             if (race.indexOf(temp)>-1){
                 andWaitList.add(temp);
@@ -143,7 +149,7 @@ public class BaseService {
                 andShackList.add(temp);
             }
         }
-        System.out.println(bandGap);
+        System.out.println(andShackList);
 
         BasicDBObject condition = new BasicDBObject();
         BasicDBObject conditionChildren = new BasicDBObject();
@@ -151,10 +157,13 @@ public class BaseService {
             conditionChildren.append("$all",andShackList);
         }
 
+        // TODO: 17/3/27 多组in,修改为多组
         if (andWaitList.size()>0){
+            ArrayList<String> elements = new ArrayList<String>();
             for (String key:andWaitList){
-                conditionChildren.append("$in",RaceMapper.hm.get(key));
+                elements.addAll(RaceMapper.hm.get(key));
             }
+            conditionChildren.append("$in",elements);
         }
 
         if (bandGap!=null){
@@ -168,8 +177,23 @@ public class BaseService {
                 conditionChildren.append(QueryOperators.NIN,RaceMapper.hm.get(key));
             }
         }
+        if (notList.size()<=0&&andWaitList.size()>0){
+            ArrayList<String> sb = (ArrayList<String>) RaceMapper.race.clone();
+            for (String key:andWaitList){
+                sb.remove(key);
+            }
+            ArrayList<String> elements = new ArrayList<String>();
+            for (String value:sb){
+                elements.addAll(RaceMapper.hm.get(value));
+            }
+            for (String value:andShackList){
+                if (elements.indexOf(value)>-1){
+                    elements.remove(value);
+                }
+            }
+            conditionChildren.append(QueryOperators.NIN,elements);
+        }
         condition.put("poscar.structure.sites.label",conditionChildren);
-        System.out.println(condition);
         return condition;
     }
 
@@ -210,28 +234,72 @@ public class BaseService {
 
     private static String resAppend(BasicDBObject base,int page){
         long totalCount = mongoColletion.count(base);
+//        int totalCount = 0;
 
         StringBuilder jsonAppendString = new StringBuilder("{\"cpage\":");
         jsonAppendString.append(page);
-        jsonAppendString.append(",\"count\":");
-        jsonAppendString.append(totalCount);
+
         jsonAppendString.append(",\"c\":[");
 
         boolean flag = false;
-        for(Document document:mongoColletion.find(base).skip((page-1)*10).limit(10)){
-            jsonAppendString.append(document.toJson()).append(",");
-            flag = true;
+        for(Document document:mongoColletion.find(base).skip(700).limit(10)){
+//        for(Document document:mongoColletion.find(base)){
+
+            String id = (String) document.get("m_id");
+
+            Document dumplicate = null;
+//             获取查重表中的数据
+            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
+                dumplicate = dd;
+            }
+
+            if(dumplicate!=null){
+                totalCount+=1;
+                String spaceGroup = (String) dumplicate.get("space_group_type");
+                String symmetrys = (String) dumplicate.get("independent_atom_site_symmetrys");
+                String compound_name = dumplicate.getString("compound_name");
+                String initStr = document.toJson().substring(0,document.toJson().length()-1);
+
+                String endStr = initStr+",\"spaceGroup\":\""+spaceGroup+"\",\"symmetrys\":\""+symmetrys+"\",\"compound_name\":\"" + compound_name + "\"}";
+                jsonAppendString.append(endStr).append(",");
+                flag = true;
+            }
         }
+        StringBuilder dataSuffix = new StringBuilder();
         if (flag==true){
             String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
-            return jsonStrTemp+"]}";
+            dataSuffix.append(jsonStrTemp+"]");
+        }else{
+            dataSuffix.append("]");
         }
-        return jsonAppendString+"]}";
+        dataSuffix.append(",\"count\":");
+        dataSuffix.append(totalCount);
+        dataSuffix.append("}");
+        return dataSuffix.toString();
+    }
+
+    private static String Test(BasicDBObject base,int page){
+        int totalCount = 0;
+
+        for(Document document:mongoColletion.find(base)){
+            String id = (String) document.get("m_id");
+
+            Document dumplicate = null;
+            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
+                dumplicate = dd;
+            }
+            if(dumplicate!=null){
+                totalCount+=1;
+
+            }
+        }
+        return String.valueOf(totalCount);
     }
 
     public static void main(String[] args) {
-        String str = "H&Li&2A~3B";
-       getInfoComplex(str,1);
+        String str = "Se&1A&2A&1B&2B&3A&4A|S&1A&2A&1B&2B&3A&4A|Te&1A&2A&1B&2B&3A&4A";
+        System.out.println(getInfo(str,1));
+//        System.out.println(indexArr("S&1A&2A&1B&2B&3A&4A",'&'));
     }
 
     // 根据符号筛选出条件
@@ -241,8 +309,8 @@ public class BaseService {
         int flag = -1;
         for(int i=0;i<s.length;i++){
             if (s[i]==tag){
-                if (i==1){
-                    flag = 0;
+                if (i==1 || i==2){
+                    flag = i;
                 }
                 String sb = "";
                 for (int j=i+1;j<s.length;j++){
@@ -257,8 +325,13 @@ public class BaseService {
                 }
             }
         }
-        if (flag==0){
-            res.add(String.valueOf(s[flag]));
+        if (flag!=-1){
+            System.out.println(flag);
+            String sb = "";
+            for (int i=0;i<flag;i++){
+                sb+=s[i];
+            }
+            res.add(sb);
         }
         return res;
     }
