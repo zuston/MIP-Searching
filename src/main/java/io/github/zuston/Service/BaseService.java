@@ -14,10 +14,7 @@ import io.github.zuston.Util.MongoDb;
 import io.github.zuston.Util.RaceMapper;
 import org.bson.Document;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
@@ -135,7 +132,7 @@ public class BaseService {
 
         Double bandGap = null;
         String spaceGroup = null;
-        System.out.println(andList);
+
         for (String temp:andList){
             if (race.indexOf(temp)>-1){
                 andWaitList.add(temp);
@@ -149,7 +146,6 @@ public class BaseService {
                 andShackList.add(temp);
             }
         }
-        System.out.println(andShackList);
 
         BasicDBObject condition = new BasicDBObject();
         BasicDBObject conditionChildren = new BasicDBObject();
@@ -194,6 +190,8 @@ public class BaseService {
             conditionChildren.append(QueryOperators.NIN,elements);
         }
         condition.put("poscar.structure.sites.label",conditionChildren);
+        System.out.println("筛选条件语句:");
+        System.out.println(condition);
         return condition;
     }
 
@@ -242,7 +240,7 @@ public class BaseService {
         jsonAppendString.append(",\"c\":[");
 
         boolean flag = false;
-        for(Document document:mongoColletion.find(base).skip(700).limit(10)){
+        for(Document document:mongoColletion.find(base).skip((page-1)*10).limit(10)){
 //        for(Document document:mongoColletion.find(base)){
 
             String id = (String) document.get("m_id");
@@ -299,8 +297,9 @@ public class BaseService {
     public static void main(String[] args) {
         String str = "Se&1A&2A&1B&2B&3A&4A|S&1A&2A&1B&2B&3A&4A|Te&1A&2A&1B&2B&3A&4A";
         System.out.println(getInfo(str,1));
-//        System.out.println(indexArr("S&1A&2A&1B&2B&3A&4A",'&'));
     }
+
+
 
     // 根据符号筛选出条件
     private static ArrayList<String> indexArr(String str,char tag){
@@ -334,5 +333,32 @@ public class BaseService {
             res.add(sb);
         }
         return res;
+    }
+
+    public static ArrayList<String> analysisExpression(String str){
+        Stack<Character> stack = new Stack<Character>();
+        char [] strChar = str.toCharArray();
+        for (char c:strChar){
+            if (c==')'){
+                StringBuilder sb = new StringBuilder();
+                while (!stack.isEmpty()){
+                    char value = stack.peek();
+                    if (value!='('){
+                        sb.append(value);
+                    }else{
+                        char tag = stack.pop();
+                        if(tag=='&'||tag=='|'||tag=='~'){
+                            if (tag=='&'){
+                                StringBuilder s = sb.reverse();
+                                System.out.println(s.toString());
+                            }
+                        }
+                    }
+                }
+            }else {
+                stack.push(c);
+            }
+        }
+        return null;
     }
 }
