@@ -2,21 +2,20 @@ package io.github.zuston.Service;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 import com.mongodb.QueryOperators;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.sun.tools.javah.Util;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
+import io.github.zuston.Util.AnalyExpression;
 import io.github.zuston.Util.MongoDb;
 import io.github.zuston.Util.RaceMapper;
 import org.bson.Document;
 
-import java.util.*;
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import static io.github.zuston.Util.AnalyExpression.indexArr;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 /**
@@ -100,17 +99,24 @@ public class BaseService {
     }
 
     public static String getInfo(String expression, int page) {
-        if (expression.split("\\|").length>1){
+        ArrayList<String> expressionAnalyArr = AnalyExpression.simpleAnaly(expression);
+        System.out.println("结束："+expressionAnalyArr);
+        if (expressionAnalyArr!=null&&expressionAnalyArr.size()>1){
             BasicDBObject base = new BasicDBObject();
             BasicDBList co = new BasicDBList();
-            for (String str:expression.split("\\|")){
+            for (String str:expressionAnalyArr){
                 co.add(getInfoComplex(str,page));
             }
 
             base.put("$or",co);
             return BaseService.resAppend(base,page);
         }
+        if (expressionAnalyArr==null) return expressionErr();
         return BaseService.resAppend(BaseService.getInfoComplex(expression,page),page);
+    }
+
+    private static String expressionErr(){
+        return "{\"error\":\"format error\"}";
     }
 
     //增加族系复合搜索
@@ -190,6 +196,7 @@ public class BaseService {
             conditionChildren.append(QueryOperators.NIN,elements);
         }
         condition.put("poscar.structure.sites.label",conditionChildren);
+        condition.put("type","distinct");
         System.out.println("筛选条件语句:");
         System.out.println(condition);
         return condition;
@@ -232,7 +239,6 @@ public class BaseService {
 
     private static String resAppend(BasicDBObject base,int page){
         long totalCount = mongoColletion.count(base);
-//        int totalCount = 0;
 
         StringBuilder jsonAppendString = new StringBuilder("{\"cpage\":");
         jsonAppendString.append(page);
@@ -241,8 +247,6 @@ public class BaseService {
 
         boolean flag = false;
         for(Document document:mongoColletion.find(base).skip((page-1)*10).limit(10)){
-//        for(Document document:mongoColletion.find(base)){
-
             String id = (String) document.get("m_id");
 
             Document dumplicate = null;
@@ -268,7 +272,7 @@ public class BaseService {
             String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
             dataSuffix.append(jsonStrTemp+"]");
         }else{
-            dataSuffix.append("]");
+            dataSuffix.append(jsonAppendString+"]");
         }
         dataSuffix.append(",\"count\":");
         dataSuffix.append(totalCount);
@@ -295,70 +299,8 @@ public class BaseService {
     }
 
     public static void main(String[] args) {
-        String str = "Se&1A&2A&1B&2B&3A&4A|S&1A&2A&1B&2B&3A&4A|Te&1A&2A&1B&2B&3A&4A";
+        String str = "H&(bandgap=0)";
         System.out.println(getInfo(str,1));
     }
 
-
-
-    // 根据符号筛选出条件
-    private static ArrayList<String> indexArr(String str,char tag){
-        ArrayList<String> res = new ArrayList<String>();
-        char [] s = str.toCharArray();
-        int flag = -1;
-        for(int i=0;i<s.length;i++){
-            if (s[i]==tag){
-                if (i==1 || i==2){
-                    flag = i;
-                }
-                String sb = "";
-                for (int j=i+1;j<s.length;j++){
-                    if (s[j]!='&'&&s[j]!='|'&&s[j]!='~'){
-                        sb+=s[j];
-                    }else{
-                        break;
-                    }
-                }
-                if (!sb.equals("")){
-                    res.add(sb);
-                }
-            }
-        }
-        if (flag!=-1){
-            System.out.println(flag);
-            String sb = "";
-            for (int i=0;i<flag;i++){
-                sb+=s[i];
-            }
-            res.add(sb);
-        }
-        return res;
-    }
-
-    public static ArrayList<String> analysisExpression(String str){
-        Stack<Character> stack = new Stack<Character>();
-        char [] strChar = str.toCharArray();
-        for (char c:strChar){
-            if (c==')'){
-                StringBuilder sb = new StringBuilder();
-                while (!stack.isEmpty()){
-                    char value = stack.peek();
-                    if (value!='('){
-                        sb.append(value);
-                    }else{
-                        char tag = stack.pop();
-                        if(tag=='&'||tag=='|'||tag=='~'){
-                            if (tag=='&'){
-                                StringBuilder s = sb.reverse();
-                                System.out.println(s.toString());
-                            }
-                        }
-                    }
-                }
-            }else {
-                stack.push(c);
-            }
-        }
-        return null;
-    }
 }

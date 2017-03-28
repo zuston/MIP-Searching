@@ -1,4 +1,4 @@
-package Test;
+package io.github.zuston.Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,14 +6,9 @@ import java.util.Collections;
 import java.util.Stack;
 
 /**
- * Created by zuston on 17/3/27.
+ * Created by zuston on 17-3-28.
  */
-public class AnalysisExpressionTest {
-    public static void main(String[] args) {
-        String testStr1 = "1A&2A&S";
-        System.out.println(simpleAnaly(testStr1));
-    }
-
+public class AnalyExpression {
     public static ArrayList<String> simpleAnaly(String str){
         Stack<Character> stack = new Stack<Character>();
         char [] strChar = str.toCharArray();
@@ -109,36 +104,37 @@ public class AnalysisExpressionTest {
         return false;
     }
 
-    public static ArrayList<String> analyExpression(String str){
-        Stack<Character> stack = new Stack<Character>();
-        char [] strChar = str.toCharArray();
-        for (char c:strChar){
-            if (c==')'){
-                int flag = 0;
-                StringBuilder sb = new StringBuilder();
-                while (!stack.isEmpty()){
-                    char value = stack.peek();
-                    if (value!='('){
-                        sb.append(value);
+    // 根据符号筛选出条件
+    public static ArrayList<String> indexArr(String str,char tag){
+        ArrayList<String> res = new ArrayList<String>();
+        char [] s = str.toCharArray();
+        int flag = -1;
+        for(int i=0;i<s.length;i++){
+            if (s[i]==tag){
+                if (i==1 || i==2){
+                    flag = i;
+                }
+                String sb = "";
+                for (int j=i+1;j<s.length;j++){
+                    if (s[j]!='&'&&s[j]!='|'&&s[j]!='~'){
+                        sb+=s[j];
                     }else{
-                        char tag = stack.pop();
-                        if(tag=='&'||tag=='|'||tag=='~'){
-                            if (tag=='&'){
-                                StringBuilder s = sb.reverse();
-                                System.out.println(s.toString());
-                            }
-                        }
-                        flag = 1;
-                    }
-                    if (flag==1){
                         break;
                     }
                 }
-            }else {
-                stack.push(c);
+                if (!sb.equals("")){
+                    res.add(sb);
+                }
             }
         }
-        return null;
+        if (flag!=-1){
+            System.out.println(flag);
+            String sb = "";
+            for (int i=0;i<flag;i++){
+                sb+=s[i];
+            }
+            res.add(sb);
+        }
+        return res;
     }
-
 }
