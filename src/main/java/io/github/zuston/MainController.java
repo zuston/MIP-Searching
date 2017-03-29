@@ -13,10 +13,7 @@ public class MainController {
 
     @RequestMapping("/m/search")
     public String index(@RequestBody ConditionsBean conditionsBean){
-//        return "{\"c\":[{\"name\":\"zuston\",\"age\":20},{\"name\":\"shacha\",\"age\":32}]}";
         return BaseService.getInfo(conditionsBean);
-//        return new TestBean(conditionsBean.condition.get(0).name,1);
-
     }
 
 
@@ -25,7 +22,6 @@ public class MainController {
         System.out.println(expression);
         return BaseService.getInfo(expression,page);
     }
-
 
     public static void main(String[] args) {
         SpringApplication.run(MainController.class,args);

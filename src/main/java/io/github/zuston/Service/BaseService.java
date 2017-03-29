@@ -8,6 +8,7 @@ import com.mongodb.client.MongoDatabase;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
 import io.github.zuston.Util.AnalyExpression;
+import io.github.zuston.Util.ErrorMapper;
 import io.github.zuston.Util.MongoDb;
 import io.github.zuston.Util.RaceMapper;
 import org.bson.Document;
@@ -111,23 +112,29 @@ public class BaseService {
             base.put("$or",co);
             return BaseService.resAppend(base,page);
         }
-        if (expressionAnalyArr==null) return expressionErr();
+        if (expressionAnalyArr==null) return ErrorMapper.FormatError();
+
         return BaseService.resAppend(BaseService.getInfoComplex(expression,page),page);
     }
 
-    private static String expressionErr(){
-        return "{\"error\":\"format error\"}";
-    }
-
-    //增加族系复合搜索
+    /**
+     * 增加族系复合搜索
+     * @param expression
+     * @param page
+     * @return
+     */
     private static BasicDBObject getInfoComplex(String expression,int page){
         System.out.println(expression);
         ArrayList<String> race = new ArrayList<String>();
         race.addAll(RaceMapper.race);
-        // 和的列表，其中又分bandGAP 单元素 族系元素
-        // TODO: 17/3/27 单元素可能会报错
+        /**
+         * 和的列表，其中又分bandGAP 单元素 族系元素
+         * TODO: 17/3/27 单元素可能会报错
+         */
         ArrayList<String> andList = indexArr(expression,'&');
-        // 否的列表，其中分为族系元素
+        /**
+         * 否的列表，其中分为族系元素
+         */
         ArrayList<String> notList = indexArr(expression,'~');
         if (andList.size()<=0){
             return null;
@@ -159,7 +166,9 @@ public class BaseService {
             conditionChildren.append("$all",andShackList);
         }
 
-        // TODO: 17/3/27 多组in,修改为多组
+        /**
+         * TODO: 17/3/27 多组in,修改为多组
+         */
         if (andWaitList.size()>0){
             ArrayList<String> elements = new ArrayList<String>();
             for (String key:andWaitList){
@@ -237,8 +246,22 @@ public class BaseService {
         return condition;
     }
 
+    /**
+     * 根据condition，查找出结果拼接成 json string
+     * @param base
+     * @param page
+     * @return
+     */
     private static String resAppend(BasicDBObject base,int page){
+
+        if (base==null){
+            return ErrorMapper.ElementLackError();
+        }
         long totalCount = mongoColletion.count(base);
+
+        if (totalCount==0){
+            return ErrorMapper.NoDataError();
+        }
 
         StringBuilder jsonAppendString = new StringBuilder("{\"cpage\":");
         jsonAppendString.append(page);
@@ -250,7 +273,9 @@ public class BaseService {
             String id = (String) document.get("m_id");
 
             Document dumplicate = null;
-//             获取查重表中的数据
+            /**
+             * 获取查重表中的数据
+             */
             for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
                 dumplicate = dd;
             }
@@ -280,26 +305,9 @@ public class BaseService {
         return dataSuffix.toString();
     }
 
-    private static String Test(BasicDBObject base,int page){
-        int totalCount = 0;
-
-        for(Document document:mongoColletion.find(base)){
-            String id = (String) document.get("m_id");
-
-            Document dumplicate = null;
-            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
-                dumplicate = dd;
-            }
-            if(dumplicate!=null){
-                totalCount+=1;
-
-            }
-        }
-        return String.valueOf(totalCount);
-    }
 
     public static void main(String[] args) {
-        String str = "H&(bandgap=0)";
+        String str = "(bandgap=0)";
         System.out.println(getInfo(str,1));
     }
 
