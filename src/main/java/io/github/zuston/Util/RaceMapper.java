@@ -90,12 +90,12 @@ public class RaceMapper {
                 "Fe",
                 "Ru",
                 "Os",
-                "Hs",
+
 
                 "Co",
                 "Rh",
-                "Lr",
-                "Mt",
+
+                "Ir",
 
                 "Ni",
                 "Pd",
@@ -107,8 +107,7 @@ public class RaceMapper {
         return new ArrayList<String>(Arrays.asList(
                 "Mn",
                 "Tc",
-                "Re",
-                "Bh"
+                "Re"
         ));
     }
 
@@ -116,8 +115,8 @@ public class RaceMapper {
         return new ArrayList<String>(Arrays.asList(
                 "Cr",
                 "Mo",
-                "W",
-                "Sg"
+                "W"
+
         ));
     }
 
@@ -126,8 +125,7 @@ public class RaceMapper {
             Arrays.asList(
                     "V",
                     "Nb",
-                    "Ta",
-                    "Db"
+                    "Ta"
             )
         );
     }
@@ -136,8 +134,7 @@ public class RaceMapper {
         return new ArrayList<String>(Arrays.asList(
                 "Ti",
                 "Zr",
-                "Hf",
-                "Rf"
+                "Hf"
         ));
     }
 
@@ -145,7 +142,37 @@ public class RaceMapper {
         return new ArrayList<String>(
                 Arrays.asList(
                         "Sc",
-                        "Y"
+                        "Y",
+                        "La",
+                        "Ce",
+                        "Pr",
+                        "Nd",
+                        "Pm",
+                        "Sm",
+                        "Eu",
+                        "Gd",
+                        "Tb",
+                        "Dy",
+                        "Ho",
+                        "Er",
+                        "Tm",
+                        "Yb",
+                        "Lu",
+                        "Ac",
+                        "Th",
+                        "Pa",
+                        "U",
+                        "Np",
+                        "Pu",
+                        "Am",
+                        "Cm",
+                        "Bk",
+                        "Cf",
+                        "Es",
+                        "Fm",
+                        "Md",
+                        "No",
+                        "Lr"
                 )
         );
     }

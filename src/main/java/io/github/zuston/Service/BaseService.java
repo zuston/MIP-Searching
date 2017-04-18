@@ -7,13 +7,14 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
-import io.github.zuston.Util.AnalyExpression;
-import io.github.zuston.Util.ErrorMapper;
-import io.github.zuston.Util.MongoDb;
-import io.github.zuston.Util.RaceMapper;
+import io.github.zuston.Util.*;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
+import java.io.*;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
 import static io.github.zuston.Util.AnalyExpression.indexArr;
@@ -27,7 +28,10 @@ public class BaseService {
     public static MongoDatabase mongoDataBase = MongoDb.getInstance();
     public static MongoCollection<Document> mongoColletion = mongoDataBase.getCollection("vasp_input");
 
-    public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("dumplicate_conditions");
+    public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("dc");
+
+    public static MongoCollection<Document> extraColletion = mongoDataBase.getCollection("extract");
+
 
     public static String getInfo(ConditionsBean conditionsBean) {
 
@@ -99,14 +103,14 @@ public class BaseService {
         return jsonStrTemp+"]}";
     }
 
-    public static String getInfo(String expression, int page) {
+    public static String getInfo(String expression, int page,int flag) {
         ArrayList<String> expressionAnalyArr = AnalyExpression.simpleAnaly(expression);
         System.out.println("结束："+expressionAnalyArr);
         if (expressionAnalyArr!=null&&expressionAnalyArr.size()>1){
             BasicDBObject base = new BasicDBObject();
             BasicDBList co = new BasicDBList();
             for (String str:expressionAnalyArr){
-                co.add(getInfoComplex(str,page));
+                co.add(getInfoComplex(str,page,flag));
             }
 
             base.put("$or",co);
@@ -114,7 +118,7 @@ public class BaseService {
         }
         if (expressionAnalyArr==null) return ErrorMapper.FormatError();
 
-        return BaseService.resAppend(BaseService.getInfoComplex(expression,page),page);
+        return BaseService.resAppend(BaseService.getInfoComplex(expression,page,flag),page);
     }
 
     /**
@@ -123,7 +127,7 @@ public class BaseService {
      * @param page
      * @return
      */
-    private static BasicDBObject getInfoComplex(String expression,int page){
+    private static BasicDBObject getInfoComplex(String expression,int page,int flag){
         System.out.println(expression);
         ArrayList<String> race = new ArrayList<String>();
         race.addAll(RaceMapper.race);
@@ -253,12 +257,14 @@ public class BaseService {
      * @return
      */
     private static String resAppend(BasicDBObject base,int page){
-
+//        AdditionalService.getElementsFromS(base,true);
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
+        // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = mongoColletion.count(base);
 
+        System.out.println(totalCount);
         if (totalCount==0){
             return ErrorMapper.NoDataError();
         }
@@ -282,12 +288,25 @@ public class BaseService {
 
             if(dumplicate!=null){
                 totalCount+=1;
-                String spaceGroup = (String) dumplicate.get("space_group_type");
-                String symmetrys = (String) dumplicate.get("independent_atom_site_symmetrys");
+                String spaceGroup = (String) dumplicate.get("space_group_typ");
+//                String symmetrys = (String) dumplicate.get("independent_atom_site_symmetrys");
                 String compound_name = dumplicate.getString("compound_name");
                 String initStr = document.toJson().substring(0,document.toJson().length()-1);
 
-                String endStr = initStr+",\"spaceGroup\":\""+spaceGroup+"\",\"symmetrys\":\""+symmetrys+"\",\"compound_name\":\"" + compound_name + "\"}";
+                String computedString = "";
+
+                /**
+                 * 查询是否是计算数据
+                 */
+                Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+                long computedValue = extraColletion.count(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan"));
+                if (computedValue>0) {
+                    computedString = ",\"computed\":" + 1 + "";
+                }else{
+                    computedString = ",\"computed\":" + 0 + "";
+                }
+
+                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"compound_name\":\"" + compound_name + "\"}";
                 jsonAppendString.append(endStr).append(",");
                 flag = true;
             }
@@ -305,10 +324,220 @@ public class BaseService {
         return dataSuffix.toString();
     }
 
-
-    public static void main(String[] args) {
-        String str = "(bandgap=0)";
-        System.out.println(getInfo(str,1));
+    public static String getBiliInfo(String bili, String biliNumber, int page, int flag) {
+        String biliContent = bili;
+        String [] biliNumberArr = biliNumber.split("\\|");
+        BasicDBObject base = new BasicDBObject();
+        BasicDBList co = new BasicDBList();
+        for (String number:biliNumberArr){
+            co.add(getBiliConditions(biliContent,number));
+        }
+        base.put("$or",co);
+        return biliResAppend(base,page,flag);
     }
 
+    private static String biliResAppend(BasicDBObject base, int page,int computeFlag) {
+        if (base==null){
+            return ErrorMapper.ElementLackError();
+        }
+        long totalCount = duplicateColletion.count(base);
+        if (totalCount==0){
+            return ErrorMapper.NoDataError();
+        }
+
+        StringBuilder jsonAppendString = new StringBuilder("{\"cpage\":");
+        jsonAppendString.append(page);
+
+        jsonAppendString.append(",\"c\":[");
+
+        boolean flag = false;
+        for(Document document:duplicateColletion.find(base).skip((page-1)*10).limit(10)){
+
+            String id = (String) document.get("source_folder_name");
+
+
+            Document vasp = null;
+            /**
+             * 获取查重表中的数据
+             */
+            for (Document dd:mongoColletion.find(new BasicDBObject("m_id",id)).limit(1)){
+                vasp = dd;
+            }
+
+            if(vasp!=null){
+                String spaceGroup = (String) document.get("space_group_typ");
+                Integer ves = (Integer) document.get("valence_electrons_sum");
+                String compound_name = document.getString("compound_name");
+                String initStr = vasp.toJson().substring(0,vasp.toJson().length()-1);
+
+                String computedString = "";
+
+                /**
+                 * 查询是否是计算数据
+                 */
+                Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+                long computedValue = extraColletion.count(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan"));
+                /**
+                 * computeFlag==0 时为全部数据
+                 * ==1 为计算数据抽取
+                 * 但是结果都需要计算和全部数据标识
+                 */
+                if (computeFlag==0){
+                    if (computedValue>0) {
+                        computedString = ",\"computed\":" + 1 + "";
+                    }else{
+                        computedString = ",\"computed\":" + 0 + "";
+                    }
+                }else{
+                    if (computedValue>0){
+                        computedString = ",\"computed\":" + 1 + "";
+                    }else{
+                        continue;
+                    }
+                }
+                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"ves\":\"" + String.valueOf(ves) + "\",\"compound_name\":\"" + compound_name + "\"}";
+                System.out.println(endStr);
+                jsonAppendString.append(endStr).append(",");
+                flag = true;
+            }
+        }
+        StringBuilder dataSuffix = new StringBuilder();
+        if (flag==true){
+            String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
+            dataSuffix.append(jsonStrTemp+"]");
+        }else{
+            dataSuffix.append(jsonAppendString+"]");
+        }
+        dataSuffix.append(",\"count\":");
+        dataSuffix.append(totalCount);
+        dataSuffix.append("}");
+        return dataSuffix.toString();
+    }
+
+    private static BasicDBObject getBiliConditions(String biliContent, String number) {
+        BasicDBObject condition = new BasicDBObject();
+        condition.put("atomic_nums_ratio",new BasicDBObject().append("$eq",biliContent));
+        condition.put("valence_electrons_sum",new BasicDBObject().append("$eq",Integer.valueOf(number)));
+        return condition;
+    }
+
+
+    public static String getComplexInfo(String id) {
+        BasicDBObject condition = new BasicDBObject();
+        condition.put("_id", new ObjectId(id));
+        return complexInfo(condition);
+    }
+
+    private static String complexInfo(BasicDBObject condition) {
+        StringBuilder jsonAppendString = new StringBuilder("{\"vasp\":");
+//        condition.put("type",new BasicDBObject("$exists",true));
+        for(Document document:mongoColletion.find(condition).limit(1)){
+            String id = (String) document.get("m_id");
+
+            Document dumplicate = null;
+            /**
+             * 获取查重表中的数据
+             */
+            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
+                dumplicate = dd;
+            }
+
+            Document extract = null;
+            Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+            for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan")).limit(1)){
+                extract = document1;
+            }
+
+            System.out.println(dumplicate);
+            System.out.println(extract);
+
+            if(dumplicate!=null&&extract!=null){
+
+                jsonAppendString.append(document.toJson());
+                jsonAppendString.append(",\"dumplicate\":");
+                jsonAppendString.append(dumplicate.toJson());
+                jsonAppendString.append(",\"extract\":");
+                jsonAppendString.append(extract.toJson());
+                jsonAppendString.append("}");
+            }
+        }
+        return jsonAppendString.toString();
+    }
+
+    public static String downloadBiliInfo(String bili, String biliNumber) throws IOException, NoSuchAlgorithmException {
+        String biliContent = bili;
+        String [] biliNumberArr = biliNumber.split("\\|");
+        BasicDBObject base = new BasicDBObject();
+        BasicDBList co = new BasicDBList();
+        for (String number:biliNumberArr){
+            co.add(getBiliConditions(biliContent,number));
+        }
+        base.put("$or",co);
+        return excelGenerate(base);
+    }
+
+    private static String excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
+        ArrayList<LinkedHashMap<String,String>> container = new ArrayList<>();
+        for (Document document:duplicateColletion.find(base)){
+            String id = (String) document.get("source_folder_name");
+
+            Document vasp = null;
+            for (Document dd:mongoColletion.find(new BasicDBObject("m_id",id)).limit(1)){
+                vasp = dd;
+            }
+            if (vasp!=null){
+                LinkedHashMap<String,String> hm = new LinkedHashMap<>();
+                hm.put("source_folder_name", (String) document.get("source_folder_name"));
+                hm.put("化合物名称", (String) document.get("compound_name"));
+                hm.put("空间群", (String) document.get("space_group_typ"));
+                hm.put("valence_electrons_sum", String.valueOf(document.get("valence_electrons_sum")));
+                hm.put("space_group_type_num",String.valueOf(document.get("space_group_type_num")));
+                container.add(hm);
+            }
+        }
+        return ExcelGenerate.excelGenerate(container);
+    }
+
+    public static String getJSmolInfo(String idd){
+        String id = (String) mongoColletion.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("m_id");
+
+        Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+        Document document = extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan")).limit(1).first();
+        if (document==null){
+            return "error";
+        }
+        String filename = (String) document.get("m_id");
+        // TODO: 17/4/18 暂时的
+        filename = "icsd-82541-Au3Rb1Se2";
+        String mainPath = "/Users/zuston/Downloads/";
+
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        String str1 = "";
+        BufferedReader br = null;
+        try {
+            String str = "";
+            String path = mainPath+filename+"/Static/test_scan/POSCAR";
+            System.out.println(path);
+            fis = new FileInputStream(path);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            while ((str = br.readLine()) != null) {
+                str1 += str + "\r\n";
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("找不到指定文件");
+        } catch (IOException e) {
+            System.out.println("读取文件失败");
+        } finally {
+            try {
+                br.close();
+                isr.close();
+                fis.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return str1;
+    }
 }
