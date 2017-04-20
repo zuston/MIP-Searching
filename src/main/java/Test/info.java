@@ -35,4 +35,8 @@ public class info {
         String a = BaseService.getJSmolInfo("58a3f4e80095896a600fcb9e");
         System.out.println(a);
     }
+
+    public static void testExpression(){
+        String value = BaseService.getInfo("Se&Au&Rb",1,1);
+    }
 }

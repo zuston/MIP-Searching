@@ -114,11 +114,11 @@ public class BaseService {
             }
 
             base.put("$or",co);
-            return BaseService.resAppend(base,page);
+            return BaseService.resAppend(base,page,expression);
         }
         if (expressionAnalyArr==null) return ErrorMapper.FormatError();
 
-        return BaseService.resAppend(BaseService.getInfoComplex(expression,page,flag),page);
+        return BaseService.resAppend(BaseService.getInfoComplex(expression,page,flag),page,expression);
     }
 
     /**
@@ -256,15 +256,29 @@ public class BaseService {
      * @param page
      * @return
      */
-    private static String resAppend(BasicDBObject base,int page){
+    private static String resAppend(BasicDBObject base,int page,String expression){
+
+        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page));
+        if (!redisJson.equals("error")){
+            System.out.println("命中json");
+            return redisJson;
+        }
+
 //        AdditionalService.getElementsFromS(base,true);
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
-        long totalCount = mongoColletion.count(base);
+        long totalCount = 0;
+        long redisCount = RedisUtil.getSearchCount(expression);
+        if (redisCount==-1){
+            totalCount = mongoColletion.count(base);
+            RedisUtil.setSearchCount(expression,String.valueOf(totalCount));
+        }else{
+            System.out.println("命中缓存");
+            totalCount = redisCount;
+        }
 
-        System.out.println(totalCount);
         if (totalCount==0){
             return ErrorMapper.NoDataError();
         }
@@ -285,9 +299,10 @@ public class BaseService {
             for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
                 dumplicate = dd;
             }
-
+            /**
+             * 赶时间暂且这么处理
+             */
             if(dumplicate!=null){
-                totalCount+=1;
                 String spaceGroup = (String) dumplicate.get("space_group_typ");
 //                String symmetrys = (String) dumplicate.get("independent_atom_site_symmetrys");
                 String compound_name = dumplicate.getString("compound_name");
@@ -321,6 +336,7 @@ public class BaseService {
         dataSuffix.append(",\"count\":");
         dataSuffix.append(totalCount);
         dataSuffix.append("}");
+        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page),dataSuffix.toString());
         return dataSuffix.toString();
     }
 
@@ -425,6 +441,7 @@ public class BaseService {
     public static String getComplexInfo(String id) {
         BasicDBObject condition = new BasicDBObject();
         condition.put("_id", new ObjectId(id));
+//        condition.put("type","distinct");
         return complexInfo(condition);
     }
 
@@ -450,17 +467,18 @@ public class BaseService {
 
             System.out.println(dumplicate);
             System.out.println(extract);
+            jsonAppendString.append(document.toJson());
 
-            if(dumplicate!=null&&extract!=null){
-
-                jsonAppendString.append(document.toJson());
+            if(dumplicate!=null){
                 jsonAppendString.append(",\"dumplicate\":");
                 jsonAppendString.append(dumplicate.toJson());
+            }
+            if (extract!=null){
                 jsonAppendString.append(",\"extract\":");
                 jsonAppendString.append(extract.toJson());
-                jsonAppendString.append("}");
             }
         }
+        jsonAppendString.append("}");
         return jsonAppendString.toString();
     }
 
@@ -507,9 +525,10 @@ public class BaseService {
             return "error";
         }
         String filename = (String) document.get("m_id");
-        // TODO: 17/4/18 暂时的
-        filename = "icsd-82541-Au3Rb1Se2";
-        String mainPath = "/Users/zuston/Downloads/";
+        String suffixFilename = (String) ((Document)document.get("poscar_static")).get("system_name");
+//        filename = "icsd-82541-Au3Rb1Se2";
+        System.out.println("checking...");
+        String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
 
         FileInputStream fis = null;
         InputStreamReader isr = null;
@@ -517,7 +536,7 @@ public class BaseService {
         BufferedReader br = null;
         try {
             String str = "";
-            String path = mainPath+filename+"/Static/test_scan/POSCAR";
+            String path = mainPath;
             System.out.println(path);
             fis = new FileInputStream(path);
             isr = new InputStreamReader(fis);
