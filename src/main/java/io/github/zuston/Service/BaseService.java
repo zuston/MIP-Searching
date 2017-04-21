@@ -13,6 +13,7 @@ import org.bson.types.ObjectId;
 
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
@@ -28,7 +29,7 @@ public class BaseService {
     public static MongoDatabase mongoDataBase = MongoDb.getInstance();
     public static MongoCollection<Document> mongoColletion = mongoDataBase.getCollection("vasp_input");
 
-    public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("dc");
+    public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("poscar_uniqueness_info");
 
     public static MongoCollection<Document> extraColletion = mongoDataBase.getCollection("extract");
 
@@ -259,6 +260,7 @@ public class BaseService {
     private static String resAppend(BasicDBObject base,int page,String expression){
 
         String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page));
+        System.out.println(expression+"-"+String.valueOf(page));
         if (!redisJson.equals("error")){
             System.out.println("命中json");
             return redisJson;
@@ -296,16 +298,18 @@ public class BaseService {
             /**
              * 获取查重表中的数据
              */
-            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
+            for (Document dd:duplicateColletion.find(new BasicDBObject("original_id",id)).limit(1)){
                 dumplicate = dd;
             }
             /**
              * 赶时间暂且这么处理
              */
             if(dumplicate!=null){
-                String spaceGroup = (String) dumplicate.get("space_group_typ");
-//                String symmetrys = (String) dumplicate.get("independent_atom_site_symmetrys");
-                String compound_name = dumplicate.getString("compound_name");
+                String spaceGroup = (String) dumplicate.get("space_group_type");
+                String compound_name = (String) dumplicate.get("compound_name");
+                DecimalFormat    df   = new DecimalFormat("######0.00");
+                String atomic_average_mass =  String.valueOf(df.format(dumplicate.getDouble("atomic_average_mass")));
+                String simplified_name = (String) dumplicate.get("simplified_name");
                 String initStr = document.toJson().substring(0,document.toJson().length()-1);
 
                 String computedString = "";
@@ -321,7 +325,7 @@ public class BaseService {
                     computedString = ",\"computed\":" + 0 + "";
                 }
 
-                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"compound_name\":\"" + compound_name + "\"}";
+                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"atomic_average_mass\":\"" + atomic_average_mass + "\",\"simplified_name\":\"" + simplified_name+ "\",\"compound_name\":\"" + compound_name+ "\"}";
                 jsonAppendString.append(endStr).append(",");
                 flag = true;
             }
@@ -369,7 +373,7 @@ public class BaseService {
         boolean flag = false;
         for(Document document:duplicateColletion.find(base).skip((page-1)*10).limit(10)){
 
-            String id = (String) document.get("source_folder_name");
+            String id = (String) document.get("original_id");
 
 
             Document vasp = null;
@@ -381,9 +385,12 @@ public class BaseService {
             }
 
             if(vasp!=null){
-                String spaceGroup = (String) document.get("space_group_typ");
-                Integer ves = (Integer) document.get("valence_electrons_sum");
-                String compound_name = document.getString("compound_name");
+                String spaceGroup = (String) document.get("space_group_type");
+                Integer ves = (Integer) document.get("element_valence_electrons_sum");
+                String compound_name = (String) document.get("compound_name");
+                DecimalFormat    df   = new DecimalFormat("######0.00");
+                String atomic_average_mass =  String.valueOf(df.format(document.getDouble("atomic_average_mass")));
+                String simplified_name = (String) document.get("simplified_name");
                 String initStr = vasp.toJson().substring(0,vasp.toJson().length()-1);
 
                 String computedString = "";
@@ -411,7 +418,7 @@ public class BaseService {
                         continue;
                     }
                 }
-                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"ves\":\"" + String.valueOf(ves) + "\",\"compound_name\":\"" + compound_name + "\"}";
+                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"ves\":\"" + String.valueOf(ves) + "\",\"atomic_average_mass\":\"" + atomic_average_mass + "\",\"simplified_name\":\"" + simplified_name+ "\",\"compound_name\":\"" + compound_name+ "\"}";
                 System.out.println(endStr);
                 jsonAppendString.append(endStr).append(",");
                 flag = true;
@@ -432,8 +439,8 @@ public class BaseService {
 
     private static BasicDBObject getBiliConditions(String biliContent, String number) {
         BasicDBObject condition = new BasicDBObject();
-        condition.put("atomic_nums_ratio",new BasicDBObject().append("$eq",biliContent));
-        condition.put("valence_electrons_sum",new BasicDBObject().append("$eq",Integer.valueOf(number)));
+        condition.put("atomic_numbers_ratio",new BasicDBObject().append("$eq",biliContent));
+        condition.put("element_valence_electrons_sum",new BasicDBObject().append("$eq",Integer.valueOf(number)));
         return condition;
     }
 
@@ -455,7 +462,7 @@ public class BaseService {
             /**
              * 获取查重表中的数据
              */
-            for (Document dd:duplicateColletion.find(new BasicDBObject("source_folder_name",id)).limit(1)){
+            for (Document dd:duplicateColletion.find(new BasicDBObject("original_id",id)).limit(1)){
                 dumplicate = dd;
             }
 
@@ -497,7 +504,7 @@ public class BaseService {
     private static String excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
         ArrayList<LinkedHashMap<String,String>> container = new ArrayList<>();
         for (Document document:duplicateColletion.find(base)){
-            String id = (String) document.get("source_folder_name");
+            String id = (String) document.get("original_id");
 
             Document vasp = null;
             for (Document dd:mongoColletion.find(new BasicDBObject("m_id",id)).limit(1)){
@@ -505,10 +512,10 @@ public class BaseService {
             }
             if (vasp!=null){
                 LinkedHashMap<String,String> hm = new LinkedHashMap<>();
-                hm.put("source_folder_name", (String) document.get("source_folder_name"));
+                hm.put("original_id", (String) document.get("original_id"));
                 hm.put("化合物名称", (String) document.get("compound_name"));
-                hm.put("空间群", (String) document.get("space_group_typ"));
-                hm.put("valence_electrons_sum", String.valueOf(document.get("valence_electrons_sum")));
+                hm.put("空间群", (String) document.get("space_group_type"));
+                hm.put("element_valence_electrons_sum", String.valueOf(document.get("element_valence_electrons_sum")));
                 hm.put("space_group_type_num",String.valueOf(document.get("space_group_type_num")));
                 container.add(hm);
             }
@@ -525,7 +532,7 @@ public class BaseService {
             return "error";
         }
         String filename = (String) document.get("m_id");
-        String suffixFilename = (String) ((Document)document.get("poscar_static")).get("system_name");
+        String suffixFilename = (String) ((Document)document.get("poscar_static")).get("system_type");
 //        filename = "icsd-82541-Au3Rb1Se2";
         System.out.println("checking...");
         String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";

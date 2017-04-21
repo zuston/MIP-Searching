@@ -69,7 +69,7 @@ public class ExcelGenerate {
 
             Row rows = sheet.createRow(count);
             Cell cell0s = rows.createCell(0);
-            cell0s.setCellValue(hm.get("source_folder_name"));
+            cell0s.setCellValue(hm.get("original_id"));
             Cell cells = rows.createCell(1);
             cells.setCellValue(hm.get("化合物名称"));
             Cell cell1s = rows.createCell(2);
