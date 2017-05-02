@@ -1,6 +1,7 @@
 package Test;
 
 import io.github.zuston.Service.BaseService;
+import io.github.zuston.Service.BaseServiceV2;
 
 import java.io.IOException;
 
@@ -10,7 +11,7 @@ import java.io.IOException;
 public class info {
     public static void main(String[] args) throws IOException {
 
-        getInfo();
+        getInfoV2();
 
     }
 
@@ -18,6 +19,11 @@ public class info {
     public static void getInfo(){
         String a = BaseService.getComplexInfo("58a3f4f20095896a600fccda");
         System.out.println(a);
+    }
+
+    public static void getInfoV2(){
+        String value = BaseServiceV2.basicDetailInfoFunction("5900b6b174009c740ac5d710");
+        System.out.println(value);
     }
 
     /**
@@ -37,6 +43,7 @@ public class info {
     }
 
     public static void testExpression(){
-        String value = BaseService.getInfo("Se&Au&Rb",1,1);
+        String value = BaseService.getInfo("S&Se",1,1);
+        System.out.println(value);
     }
 }

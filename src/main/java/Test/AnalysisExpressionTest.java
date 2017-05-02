@@ -1,21 +1,22 @@
 package Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Stack;
+import io.github.zuston.Service.BaseServiceV2;
 
-import static io.github.zuston.Util.AnalyExpression.simpleAnaly;
+import java.util.ArrayList;
+import java.util.Stack;
 
 /**
  * Created by zuston on 17/3/27.
  */
 public class AnalysisExpressionTest {
     public static void main(String[] args) {
-        String testStr1 = "1A&2A&S";
-        System.out.println(simpleAnaly(testStr1));
+        String testStr1 = "Ag~1A&(es=1:2:4:1)&(ve=12)";
+        System.out.println(BaseServiceV2.basicInfoFunction(testStr1,1,1));
+//        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1));
+//        System.out.println(indexArr("1A&2A&S&(space=1)&(ev=1:1:1)",'&'));
+//        System.out.println();
+//        BaseService.getInfo(testStr1,1,1);
     }
-
 
 
     public static boolean isTag(char c){

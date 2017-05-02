@@ -1,8 +1,6 @@
 package io.github.zuston.Util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Stack;
 
 /**
@@ -24,6 +22,9 @@ public class AnalyExpression {
                     sb.append(stack.pop());
                 }
                 stack.pop();
+                if (stack.size()>0){
+                    stack.pop();
+                }
                 if (sb.length()>0){
                     arr.add(String.valueOf(sb.reverse()));
                 }
@@ -36,65 +37,78 @@ public class AnalyExpression {
             sb.append(stack.pop());
         }
         sb = sb.reverse();
-        System.out.println(arr);
-        System.out.println(sb);
-        if (arr.isEmpty()){
-            return new ArrayList<String>(Arrays.asList(str.split("\\|")));
+        System.out.println("搜索表达式:"+str);
+        // arr 代表括号里面的元素
+        System.out.println("括号里面的元素："+arr);
+        // arr 里面含有spaceGroup等筛选信息
+        ArrayList<String> filterInfo = new ArrayList<String>();
+        // arr 里面进行表达式组合的信息
+        ArrayList<String> componentInfo = new ArrayList<String>();
+        // arr 里面类似(po=10|89)这种，还得要拆分
+        ArrayList<String> conditionSplitComponent = new ArrayList<String>();
+        for (String i:arr){
+            if (i.split("\\|").length<=1&&(i.indexOf("=")>=0||i.indexOf(">")>=0||i.indexOf("<")>=0||i.indexOf("-")>=0)){
+                filterInfo.add(i);
+            }else if(i.split("\\|").length>1&&i.indexOf("=")>=0){
+                conditionSplitComponent.add(i);
+            }else{
+                componentInfo.add(i);
+            }
         }
-        if (sb.length()>=2){
-            int len = arr.size();
-            ArrayList<String> front = new ArrayList<String>();
-            ArrayList<String> end = new ArrayList<String>();
-            for (int i=0;i<len;i++){
-                if (isTag(sb.charAt(i))){
-                    front.add(String.valueOf(sb.charAt(i)));
-                }
-                if (isTag(sb.charAt(sb.length()-1-i))){
-                    end.add(String.valueOf(sb.charAt(sb.length()-1-i)));
-                }
+        System.out.println("括号内筛选元素:"+filterInfo);
+        System.out.println("括号外面的元素："+sb);
+        System.out.println("筛选拆分的组合:"+conditionSplitComponent);
 
-            }
-            System.out.println("前缀"+front);
-            Collections.reverse(end);
-            System.out.println("后缀"+end);
+        ArrayList<String> gres = new ArrayList<String>();
 
-            ArrayList<String> allStr = new ArrayList<String>();
-            for (String splitStr:arr){
-                if (splitStr.indexOf("\\|")>0){
-                    allStr.add(splitStr);
-                }else if (splitStr.indexOf("&")>0){
-                    sb.append(splitStr);
+        if (componentInfo.isEmpty()){
+            gres.add(String.valueOf(sb));
+        }else{
+            for (String splitStr:componentInfo.get(0).split("\\|")){
+                if (sb.length()==0){
+                    gres.add(String.valueOf(splitStr));
+                    continue;
                 }
-            }
-            // 针对于左单括号
-            if (front.size()==1&&end.size()==0){
-                if (front.get(0).equals("&")){
-                    ArrayList<String> resS = new ArrayList<String>();
-                    for (String splitStr:arr.get(0).split("\\|")){
-                        System.out.println(splitStr);
-                        StringBuilder res = new StringBuilder();
-                        res.append(splitStr).append(sb);
-                        resS.add(String.valueOf(res));
-                    }
-                    return resS;
-                }
-            }
-
-            // 针对于右单括号
-            if (front.size()==0&&end.size()==1){
-                if (end.get(0).equals("&")){
-                    ArrayList<String> resS = new ArrayList<String>();
-                    for (String splitStr:arr.get(0).split("\\|")){
-                        StringBuilder res = new StringBuilder();
-                        res.append(sb).append(splitStr);
-                        resS.add(String.valueOf(res));
-                    }
-                    return resS;
-                }
+                StringBuilder res = new StringBuilder();
+                res.append(sb).append("&").append(splitStr);
+                gres.add(String.valueOf(res));
             }
         }
 
-        return null;
+
+
+        ArrayList<String> finalRes = new ArrayList<String>();
+        for (String gresOne:gres){
+            StringBuilder temp = new StringBuilder();
+            temp.append(gresOne);
+            for (String filterCondition:filterInfo){
+                temp.append("&(").append(filterCondition).append(")");
+            }
+            finalRes.add(temp.toString());
+        }
+
+        // 如果没有类似于 ve=10|9 这种条件，直接返回原先结果集
+        if (conditionSplitComponent.size()==0){
+            return finalRes;
+        }
+
+
+        // 补充拆分
+        ArrayList<String> conditionRes = new ArrayList<String>();
+        for (String originRes:finalRes){
+            for (String condition:conditionSplitComponent){
+                String conditionKeyName = condition.split("=")[0];
+                for (String co:condition.split("=")[1].split("\\|")){
+                    StringBuilder temp = new StringBuilder(originRes);
+                    temp.append("&(").append(conditionKeyName).append("=").append(co).append(")");
+                    conditionRes.add(temp.toString());
+                }
+            }
+        }
+
+        System.out.println("最后的分析语句结果集:"+conditionRes);
+        return conditionRes;
+
     }
 
     public static boolean isTag(char c){

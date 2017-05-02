@@ -15,6 +15,7 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,7 @@ public class BaseService {
 
     public static MongoCollection<Document> extraColletion = mongoDataBase.getCollection("extract");
 
+    public static MongoCollection<Document> latestBasicCollection = mongoDataBase.getCollection("pfsas_0426");
 
     public static String getInfo(ConditionsBean conditionsBean) {
 
@@ -104,9 +106,45 @@ public class BaseService {
         return jsonStrTemp+"]}";
     }
 
+
+    public static String basicInfoFunction(String expression, int page,int flag) {
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression);
+        System.out.println(basicDBObject);
+        return BaseService.resAppend(basicDBObject,page,expression);
+    }
+
+
     public static String getInfo(String expression, int page,int flag) {
+
+        /**
+         * 过渡办法
+         */
+        if (expression.indexOf("ve")>=0&&expression.indexOf("es")>=0){
+            ArrayList<String> a = new ArrayList<String>(Arrays.asList(expression.split("&")));
+            String es = "";
+            String ve = "";
+            for (String i:a){
+                if (i.indexOf("es")>=0){
+                    es = i.split("=")[1];
+                    if (es.indexOf(")")>=0){
+                        es = es.substring(0,es.length()-1);
+                    }
+                    continue;
+                }
+                if (i.indexOf("ve")>=0){
+                    ve = i.split("=")[1];
+                    if (ve.indexOf(")")>=0){
+                        ve = ve.substring(0,ve.length()-1);
+                    }
+                }
+            }
+            System.out.println(ve);
+            System.out.println(es);
+            return getBiliInfo(es,ve,page,flag);
+        }
+
+
         ArrayList<String> expressionAnalyArr = AnalyExpression.simpleAnaly(expression);
-        System.out.println("结束："+expressionAnalyArr);
         if (expressionAnalyArr!=null&&expressionAnalyArr.size()>1){
             BasicDBObject base = new BasicDBObject();
             BasicDBList co = new BasicDBList();
@@ -121,6 +159,7 @@ public class BaseService {
 
         return BaseService.resAppend(BaseService.getInfoComplex(expression,page,flag),page,expression);
     }
+
 
     /**
      * 增加族系复合搜索
@@ -160,10 +199,24 @@ public class BaseService {
             }else if (temp.indexOf("spacegroup")>=0){
                 String t = temp.split("=")[1];
                 spaceGroup = String.valueOf(t.substring(0,t.length()-1));
+            }else if(temp.indexOf("es")>=0){
+                /**
+                 *
+                 * 增加的表达式解析
+                 */
+                String esValue = temp.split("=")[1];
+                esValue = String.valueOf(esValue.substring(0, esValue.length()-1));
+                System.out.println(esValue);
+            }else if(temp.indexOf("ve")>=0){
+                String veValue = temp.split("=")[1];
+                veValue = String.valueOf(veValue.substring(0,veValue.length()-1));
+                System.out.println(veValue);
             }else{
                 andShackList.add(temp);
             }
         }
+
+
 
         BasicDBObject condition = new BasicDBObject();
         BasicDBObject conditionChildren = new BasicDBObject();
@@ -266,7 +319,6 @@ public class BaseService {
             return redisJson;
         }
 
-//        AdditionalService.getElementsFromS(base,true);
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
@@ -274,7 +326,9 @@ public class BaseService {
         long totalCount = 0;
         long redisCount = RedisUtil.getSearchCount(expression);
         if (redisCount==-1){
+            long time = System.currentTimeMillis();
             totalCount = mongoColletion.count(base);
+            System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
             RedisUtil.setSearchCount(expression,String.valueOf(totalCount));
         }else{
             System.out.println("命中缓存");
@@ -291,6 +345,8 @@ public class BaseService {
         jsonAppendString.append(",\"c\":[");
 
         boolean flag = false;
+
+        long time1 = System.currentTimeMillis();
         for(Document document:mongoColletion.find(base).skip((page-1)*10).limit(10)){
             String id = (String) document.get("m_id");
 
@@ -330,6 +386,8 @@ public class BaseService {
                 flag = true;
             }
         }
+
+        System.out.println("skip获取:"+(System.currentTimeMillis()-time1));
         StringBuilder dataSuffix = new StringBuilder();
         if (flag==true){
             String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
@@ -346,8 +404,14 @@ public class BaseService {
 
     public static String getBiliInfo(String bili, String biliNumber, int page, int flag) {
         String biliContent = bili;
+        if (biliNumber.equals("")){
+            BasicDBObject condition = new BasicDBObject();
+            condition.put("atomic_numbers_ratio",new BasicDBObject().append("$eq",biliContent));
+            return biliResAppend(condition,page,flag);
+        }
         String [] biliNumberArr = biliNumber.split("\\|");
         BasicDBObject base = new BasicDBObject();
+
         BasicDBList co = new BasicDBList();
         for (String number:biliNumberArr){
             co.add(getBiliConditions(biliContent,number));
@@ -375,7 +439,6 @@ public class BaseService {
 
             String id = (String) document.get("original_id");
 
-
             Document vasp = null;
             /**
              * 获取查重表中的数据
@@ -394,7 +457,6 @@ public class BaseService {
                 String initStr = vasp.toJson().substring(0,vasp.toJson().length()-1);
 
                 String computedString = "";
-
                 /**
                  * 查询是否是计算数据
                  */
@@ -415,7 +477,7 @@ public class BaseService {
                     if (computedValue>0){
                         computedString = ",\"computed\":" + 1 + "";
                     }else{
-                        continue;
+                        computedString = ",\"computed\":" + 0 + "";
                     }
                 }
                 String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"ves\":\"" + String.valueOf(ves) + "\",\"atomic_average_mass\":\"" + atomic_average_mass + "\",\"simplified_name\":\"" + simplified_name+ "\",\"compound_name\":\"" + compound_name+ "\"}";
@@ -502,7 +564,7 @@ public class BaseService {
     }
 
     private static String excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
-        ArrayList<LinkedHashMap<String,String>> container = new ArrayList<>();
+        ArrayList<LinkedHashMap<String,String>> container = new ArrayList<LinkedHashMap<String, String>>();
         for (Document document:duplicateColletion.find(base)){
             String id = (String) document.get("original_id");
 
@@ -511,10 +573,11 @@ public class BaseService {
                 vasp = dd;
             }
             if (vasp!=null){
-                LinkedHashMap<String,String> hm = new LinkedHashMap<>();
+                LinkedHashMap<String,String> hm = new LinkedHashMap<String, String>();
                 hm.put("original_id", (String) document.get("original_id"));
                 hm.put("化合物名称", (String) document.get("compound_name"));
                 hm.put("空间群", (String) document.get("space_group_type"));
+                hm.put("element_simple_name",(String) document.get("simplified_name"));
                 hm.put("element_valence_electrons_sum", String.valueOf(document.get("element_valence_electrons_sum")));
                 hm.put("space_group_type_num",String.valueOf(document.get("space_group_type_num")));
                 container.add(hm);
@@ -533,10 +596,11 @@ public class BaseService {
         }
         String filename = (String) document.get("m_id");
         String suffixFilename = (String) ((Document)document.get("poscar_static")).get("system_type");
-//        filename = "icsd-82541-Au3Rb1Se2";
         System.out.println("checking...");
-        String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
+//        String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
 
+        //部署正式路径
+        String mainPath = "/opt/openresty/nginx/html/static/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
         FileInputStream fis = null;
         InputStreamReader isr = null;
         String str1 = "";
