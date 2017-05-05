@@ -2,13 +2,12 @@ package io.github.zuston.Service;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
-import io.github.zuston.Util.CoreConditionGenerator;
-import io.github.zuston.Util.ErrorMapper;
-import io.github.zuston.Util.ExcelGenerate;
-import io.github.zuston.Util.RedisUtil;
+import io.github.zuston.Util.*;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
@@ -22,12 +21,14 @@ import static io.github.zuston.Service.BaseService.mongoDataBase;
  * Created by zuston on 17/5/2.
  */
 public class BaseServiceV2 {
-    public static MongoCollection<Document> latestBasicCollection = mongoDataBase.getCollection("pfsas_0426");
+    public static MongoCollection<Document> latestBasicCollection = mongoDataBase.getCollection("pfsas20170501");
     public static MongoCollection<Document> extraColletion = mongoDataBase.getCollection("extract");
+    public static MongoCollection<Document> caculateMetaCollection = mongoDataBase.getCollection("caculate_meta");
+    public static MongoCollection<Document> smallFileCollection = mongoDataBase.getCollection("small_files");
 
     public static String basicInfoFunction(String expression, int page,int flag) {
-        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression);
-        return basicInfoAppendFunction(basicDBObject,page,expression);
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        return basicInfoAppendFunction(basicDBObject,page,expression,flag);
     }
 
     /**
@@ -36,10 +37,9 @@ public class BaseServiceV2 {
      * @param page
      * @return
      */
-    private static String basicInfoAppendFunction(BasicDBObject base,int page,String expression){
+    private static String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
 
-        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page));
-        System.out.println(expression+"-"+String.valueOf(page));
+        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
         if (!redisJson.equals("error")){
             System.out.println("命中json");
             return redisJson;
@@ -55,7 +55,7 @@ public class BaseServiceV2 {
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
             System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
-            RedisUtil.setSearchCount(expression,String.valueOf(totalCount));
+            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
         }else{
             System.out.println("命中缓存");
             totalCount = redisCount;
@@ -82,12 +82,45 @@ public class BaseServiceV2 {
                 DecimalFormat df   = new DecimalFormat("######0.00");
                 String atomic_average_mass =  String.valueOf(df.format(document.getDouble("atomic_average_mass")));
                 String simplified_name = (String) document.get("simplified_name");
-                String initStr = document.toJson().substring(0,document.toJson().length()-1);
-
+//                String initStr = document.toJson().substring(0,document.toJson().length()-1);
 
                 String computedString = ",\"computed\":" +  document.get("is_computed") + "";
 
-                String endStr = initStr+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"atomic_average_mass\":\"" + atomic_average_mass + "\",\"simplified_name\":\"" + simplified_name+ "\",\"compound_name\":\"" + compound_name+ "\"}";
+                String bandGap = "";
+                String extractJobIdStr = "";
+                if ((Integer)document.get("is_computed")==1){
+                    Document extract = null;
+                    ArrayList<String> idList = new ArrayList<String>();
+                    Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+                    int count = 0;
+                    for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan"))){
+                        if (count==0){
+                            // 只取第一个数的计算结果bandGap
+                            extract = document1;
+                        }
+                        idList.add(document1.get("_id").toString());
+                        count++;
+                    }
+
+                    if (extract!=null){
+                        bandGap = ",\"bandgap\":" +  ((Document)extract.get("extract_info")).get("band_gap") + "";
+                        extractJobIdStr += ",\"jobs\":[";
+                        for (String ooid:idList){
+                            extractJobIdStr += "\""+ooid+"\",";
+                        }
+                        extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
+                        extractJobIdStr += "]";
+                    }
+                    System.out.println(extractJobIdStr);
+                }
+
+//                String computedString = ",\"computed\":" +  (extract!=null?1:0) + "";
+
+                String original_id = ",\"original_id\":\"" +  id + "\"";
+                String oid = ",\"id\":\"" +  document.get("_id") + "\"";
+                String initStr = "{\"init\":" +  1 + "";
+
+                String endStr = initStr+extractJobIdStr+original_id+oid+bandGap+computedString+",\"spaceGroup\":\""+spaceGroup+"\",\"atomic_average_mass\":\"" + atomic_average_mass + "\",\"simplified_name\":\"" + simplified_name+ "\",\"compound_name\":\"" + compound_name+ "\"}";
                 jsonAppendString.append(endStr).append(",");
                 flag = true;
             }
@@ -108,10 +141,18 @@ public class BaseServiceV2 {
         return dataSuffix.toString();
     }
 
-
-    public static String basicDownloadFunction(String expression) throws IOException, NoSuchAlgorithmException {
-        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression);
-        return excelGenerate(basicDBObject);
+    /**
+     * 生成excel，再转为流输出下载
+     * 临时目录，需要设置 777 权限
+     * @param res
+     * @param expression
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
+    public static void basicExcelDownloadFunction(HttpServletResponse res,String expression,int flag) throws IOException, NoSuchAlgorithmException {
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        String fileName = excelGenerate(basicDBObject);
+        FileDownLoadUtil.generateDownloadResponseByFile(fileName,res,"/temp");
     }
 
 
@@ -142,44 +183,47 @@ public class BaseServiceV2 {
 
     private static String detailInfoById(BasicDBObject condition) {
         StringBuilder jsonAppendString = new StringBuilder("{\"basic\":");
-        for(Document document:latestBasicCollection.find(condition).limit(1)){
-            String id = (String) document.get("original_id");
+        for(Document document:extraColletion.find(condition).limit(1)){
+            String mid = (String) document.get("m_id");
+            String original_id = mid.split("-")[0]+"-"+mid.split("-")[1];
 
-            Document extract = null;
-            Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
-            for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan")).limit(1)){
-                extract = document1;
+            Document basic = null;
+            for (Document document1:latestBasicCollection.find(new BasicDBObject("original_id",original_id)).limit(1)){
+                basic = document1;
             }
-            System.out.println(id);
-            System.out.println(extract!=null);
 
-            jsonAppendString.append(document.toJson());
+            jsonAppendString.append(basic.toJson());
 
-            if (extract!=null){
+            if (basic!=null){
                 jsonAppendString.append(",\"extract\":");
-                jsonAppendString.append(extract.toJson());
+                jsonAppendString.append(document.toJson());
             }
         }
         jsonAppendString.append("}");
         return jsonAppendString.toString();
     }
 
+    /**
+     * 老版本，直接从文件中读取来渲染jsmol
+     * @param idd
+     * @return
+     */
     public static String basicJsmolFunction(String idd){
-        String id = (String) latestBasicCollection.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("original_id");
-
-        Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
-        Document document = extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan")).limit(1).first();
+//        String id = (String) latestBasicCollection.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("original_id");
+//
+//        Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
+        Document document = extraColletion.find(new BasicDBObject("_id",new ObjectId(idd)).append("source_path","static.test_scan")).limit(1).first();
         if (document==null){
             return "error";
         }
 
         String filename = (String) document.get("m_id");
-        String suffixFilename = (String) ((Document)document.get("poscar_static")).get("system_type");
+        String suffixFilename = (String) ((Document)document.get("extract_info")).get("system_type");
         System.out.println("checking...");
-        String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
+//        String mainPath = "/Volumes/TOSHIBA EXT/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
 
         //部署正式路径
-//        String mainPath = "/opt/openresty/nginx/html/static/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
+        String mainPath = "/opt/openresty/nginx/html/static/xyl/"+suffixFilename+"/"+filename+"/Static/test_scan/POSCAR";
         FileInputStream fis = null;
         InputStreamReader isr = null;
         String str1 = "";
@@ -208,5 +252,47 @@ public class BaseServiceV2 {
             }
         }
         return str1;
+    }
+
+    /**
+     * 从 MongoDb中直接获取poscar文件来渲染jsmol
+     * @param idd
+     * @return
+     */
+    public static String basicJsmolFunctionFromMongoDb(String idd){
+        String id = (String) latestBasicCollection.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("original_id");
+        return getStringFromMongo(id,"poscar");
+    }
+
+    private static String getStringFromMongo(String mid,String columnName){
+        Pattern pattern = Pattern.compile("^" + mid + ".*$", Pattern.CASE_INSENSITIVE);
+        Document document = caculateMetaCollection.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern))).limit(1).first();
+        if (document==null){
+            return "error";
+        }
+
+        Document one = (Document) document.get("childs");
+        Document two = (Document) one.get("static");
+        Document three = (Document) two.get("childs");
+        Document four = (Document) three.get("test_scan");
+        Document five = (Document) four.get("childs");
+        Document six = (Document) five.get(columnName);
+        String fid = six.get("f_id").toString();
+
+        Document document1 = smallFileCollection.find(new BasicDBObject("_id",new ObjectId(fid))).limit(1).first();
+
+        Binary bb = (Binary) document1.get("data");
+        byte[] res = bb.getData();
+        return new String(res);
+    }
+
+    /**
+     * 旧版直接从nginx的静态资源库中读取
+     * 新版直接从mongo中读取
+     * poscar static relax 文件下载
+     */
+    public static void basicFileDownloadFunction(HttpServletResponse res,String mid,String columnName){
+        String v = getStringFromMongo(mid,columnName);
+        FileDownLoadUtil.generateDownloadResponseByString(v,res,columnName);
     }
 }

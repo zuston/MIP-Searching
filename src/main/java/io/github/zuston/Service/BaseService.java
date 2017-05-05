@@ -108,7 +108,7 @@ public class BaseService {
 
 
     public static String basicInfoFunction(String expression, int page,int flag) {
-        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression);
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,1);
         System.out.println(basicDBObject);
         return BaseService.resAppend(basicDBObject,page,expression);
     }

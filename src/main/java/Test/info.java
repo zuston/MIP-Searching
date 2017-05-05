@@ -46,4 +46,8 @@ public class info {
         String value = BaseService.getInfo("S&Se",1,1);
         System.out.println(value);
     }
+
+    public static void testInfo(){
+        System.out.println(BaseServiceV2.basicJsmolFunctionFromMongoDb(""));
+    }
 }

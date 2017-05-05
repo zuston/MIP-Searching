@@ -1,13 +1,17 @@
 package io.github.zuston;
 
-import io.github.zuston.Bean.ConditionsBean;
 import io.github.zuston.Service.BaseService;
 import io.github.zuston.Service.BaseServiceV2;
+import io.github.zuston.Util.RedisUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 
 /**
@@ -18,17 +22,28 @@ public class MainController {
 
     @RequestMapping(value = "/m/s",method = RequestMethod.GET)
     public String s(@RequestParam("expression")String expression,@RequestParam("page")int page,@RequestParam("computed")int flag){
+        expression = expression.replace("#","|");
         return BaseServiceV2.basicInfoFunction(expression,page,flag);
     }
 
     @RequestMapping(value = "/m/download", method = RequestMethod.GET)
-    public String download(@RequestParam("expression")String expression) throws IOException, NoSuchAlgorithmException {
-        return BaseServiceV2.basicDownloadFunction(expression);
+    public void download(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
+        BaseServiceV2.basicExcelDownloadFunction(res,expression,flag);
     }
 
     @RequestMapping(value = "/m/jsmol",produces = MediaType.TEXT_PLAIN_VALUE,method = RequestMethod.GET)
     public String jsmol(@RequestParam("id")String idd) throws IOException {
         return BaseServiceV2.basicJsmolFunction(idd);
+    }
+
+    @RequestMapping(value = "/m/filedownload", method = RequestMethod.GET)
+    public void download(HttpServletResponse res,@RequestParam("mid")String mid,@RequestParam("filename")String filename){
+        BaseServiceV2.basicFileDownloadFunction(res,mid,filename);
+    }
+
+    @RequestMapping(value = "/m/userInfo",method = RequestMethod.GET)
+    public String userInfo(@RequestParam("token")String token){
+        return RedisUtil.getValue(token+"Info");
     }
 
 

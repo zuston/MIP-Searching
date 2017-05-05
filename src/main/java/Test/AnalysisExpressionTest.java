@@ -10,7 +10,7 @@ import java.util.Stack;
  */
 public class AnalysisExpressionTest {
     public static void main(String[] args) {
-        String testStr1 = "Ag~1A&(es=1:2:4:1)&(ve=12)";
+        String testStr1 = "Zn&S&(sg=216)&(ve=8|18)";
         System.out.println(BaseServiceV2.basicInfoFunction(testStr1,1,1));
 //        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1));
 //        System.out.println(indexArr("1A&2A&S&(space=1)&(ev=1:1:1)",'&'));

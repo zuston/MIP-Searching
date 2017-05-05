@@ -7,8 +7,9 @@ import redis.clients.jedis.Jedis;
  */
 public class RedisUtil {
 
+    public static Jedis jedis = new Jedis("localhost");
+
     public static int getSearchCount(String id){
-        Jedis jedis = new Jedis("localhost");
         if (jedis.exists(id)){
             return Integer.parseInt(jedis.get(id));
         }else{
@@ -17,12 +18,10 @@ public class RedisUtil {
     }
 
     public static boolean setSearchCount(String id, String count){
-        Jedis jedis = new Jedis("localhost");
         return jedis.set(id,count).equals("OK");
     }
 
     public static String getSearchJson(String id){
-        Jedis jedis = new Jedis("localhost");
         if (jedis.exists(id)){
             return jedis.get(id);
         }else{
@@ -31,8 +30,12 @@ public class RedisUtil {
     }
 
     public static boolean setSearchJson(String id, String json){
-        Jedis jedis = new Jedis("localhost");
         return jedis.set(id,json).equals("OK");
+    }
+
+    public static String getValue(String key){
+        String value = jedis.get(key);
+        return value==null?"nullzero":value;
     }
 
     public static void main(String[] args) {

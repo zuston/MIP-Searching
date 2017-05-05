@@ -12,23 +12,25 @@ import static io.github.zuston.Util.AnalyExpression.indexArr;
  * Created by zuston on 17/5/2.
  */
 public class CoreConditionGenerator {
-    public static BasicDBObject coreContionGenertor(String formula){
+    public static BasicDBObject coreContionGenertor(String formula,int flag){
         ArrayList<String> formualList = AnalyExpression.simpleAnaly(formula);
         BasicDBObject base = new BasicDBObject();
         if (formualList.size()>1){
             BasicDBList list = new BasicDBList();
             for (String oneFormula:formualList){
-                list.add(simpleConditionGenertor(oneFormula));
+                list.add(simpleConditionGenertor(oneFormula,flag));
             }
             base.put("$or",list);
         }else{
-            base = simpleConditionGenertor(formualList.get(0));
+            base = simpleConditionGenertor(formualList.get(0),flag);
         }
         return base;
     }
 
-    private static BasicDBObject simpleConditionGenertor(String expression) {
+    private static BasicDBObject simpleConditionGenertor(String expression,int flag) {
         ArrayList<String> race = new ArrayList<String>();
+        BasicDBObject condition = new BasicDBObject();
+
         race.addAll(RaceMapper.race);
         /**
          * 和的列表，其中又分bandGAP 单元素 族系元素
@@ -47,32 +49,14 @@ public class CoreConditionGenerator {
         ArrayList<String> andShackList = new ArrayList<String>();
         ArrayList<String> andWaitList = new ArrayList<String>();
 
-        Integer spaceGroup = null;
-        String ElementScale = null;
-        Integer ValenceElectrons = null;
-
         for (String temp:andList){
             if (race.indexOf(temp)>-1){
                 andWaitList.add(temp);
                 continue;
             }
 
-            if (temp.indexOf("spacegroup")>=0){
-                String t = temp.split("=")[1];
-                spaceGroup = Integer.valueOf(t.substring(0,t.length()-1));
-                continue;
-            }
-
-            if(temp.indexOf("es")>=0){
-                String esValue = temp.split("=")[1];
-                esValue = String.valueOf(esValue.substring(0, esValue.length()-1));
-                ElementScale = esValue;
-                continue;
-            }
-            if(temp.indexOf("ve")>=0){
-                String veValue = temp.split("=")[1];
-                veValue = String.valueOf(veValue.substring(0,veValue.length()-1));
-                ValenceElectrons = Integer.valueOf(veValue);
+            if (temp.indexOf("=")>=0||temp.indexOf(">")>=0||temp.indexOf("<")>=0){
+                conditionFormulaComponent(temp,condition);
                 continue;
             }
 
@@ -81,8 +65,6 @@ public class CoreConditionGenerator {
         }
 
 
-
-        BasicDBObject condition = new BasicDBObject();
         BasicDBObject conditionChildren = new BasicDBObject();
         if (andShackList.size()>0){
             conditionChildren.append("$all",andShackList);
@@ -97,16 +79,6 @@ public class CoreConditionGenerator {
                 elements.addAll(RaceMapper.hm.get(key));
             }
             conditionChildren.append("$in",elements);
-        }
-
-        if (spaceGroup!=null){
-            condition.put("space_group_type_number",Integer.valueOf(spaceGroup));
-        }
-        if (ElementScale!=null){
-            condition.put("atomic_numbers_ratio",ElementScale);
-        }
-        if (ValenceElectrons!=null){
-            condition.put("valence_electrons_sum",ValenceElectrons);
         }
 
         if (notList.size()>0){
@@ -133,9 +105,104 @@ public class CoreConditionGenerator {
         if (conditionChildren.size()>0){
             condition.put("pymatgen_poscar.structure.sites.label",conditionChildren);
         }
+        if (flag==1){
+            condition.put("is_computed",1);
+        }
+        System.out.println();
         System.out.println("筛选条件语句:");
         System.out.println(condition);
         System.out.println();
         return condition;
+    }
+
+
+    private static void conditionFormulaComponent(String temp,BasicDBObject condition){
+        int equalFlag = temp.split("=").length;
+        int gtFlag = temp.split(">").length;
+        int ltFlag = temp.split("<").length;
+        int egtFlag = temp.split(">=").length;
+        int lgtFlag = temp.split("<=").length;
+
+        if (equalFlag>1&&egtFlag<2&&lgtFlag<2){
+            String kk = temp.split("=")[0];
+            String vv = temp.split("=")[1];
+
+            String key = kk.substring(1,kk.length());
+            String value = vv.substring(0,vv.length()-1);
+
+            if (value.indexOf("-")>=0){
+                String left = value.split("-")[0];
+                String right = value.split("-")[1];
+                key = KeyMapper.mapper.get(key);
+                if (KeyMapper.DoubleList.contains(key)){
+                    condition.put(key,new BasicDBObject("$gt",Integer.valueOf(left)).append("$lt",Integer.valueOf(right)));
+                    return;
+                }else{
+                    return;
+                }
+            }
+
+            if (KeyMapper.DoubleList.contains(KeyMapper.mapper.get(key))){
+                condition.put(KeyMapper.mapper.get(key),Integer.valueOf(value));
+            }else{
+                condition.put(KeyMapper.mapper.get(key),value);
+            }
+            return;
+        }
+
+        if (gtFlag>1&&egtFlag<=1){
+            String kk = temp.split(">")[0];
+            String vv = temp.split(">")[1];
+            String key = kk.substring(1,kk.length());
+            String value = vv.substring(0,vv.length()-1);
+
+            key = KeyMapper.mapper.get(key);
+
+            if (KeyMapper.DoubleList.contains(key)){
+                condition.put(key,new BasicDBObject("$gt",Integer.valueOf(value)));
+            }
+            return;
+        }
+        if (ltFlag>1&&lgtFlag<=1){
+            String kk = temp.split("<")[0];
+            String vv = temp.split("<")[1];
+            String key = kk.substring(1,kk.length());
+            String value = vv.substring(0,vv.length()-1);
+
+            key = KeyMapper.mapper.get(key);
+            System.out.println(key);
+            if (KeyMapper.DoubleList.contains(key)){
+                condition.put(key,new BasicDBObject("$lt",Integer.valueOf(value)));
+            }
+            return;
+        }
+
+
+        if (egtFlag>1){
+            String kk = temp.split(">=")[0];
+            String vv = temp.split(">=")[1];
+            String key = kk.substring(1,kk.length());
+            String value = vv.substring(0,vv.length()-1);
+
+            key = KeyMapper.mapper.get(key);
+            if (KeyMapper.DoubleList.contains(key)){
+                condition.put(key,new BasicDBObject("$gte",Integer.valueOf(value)));
+            }
+            return;
+        }
+
+        if (lgtFlag>1){
+            String kk = temp.split("<=")[0];
+            String vv = temp.split("<=")[1];
+            String key = kk.substring(1,kk.length());
+            String value = vv.substring(0,vv.length()-1);
+
+            if (KeyMapper.DoubleList.contains(key)){
+                condition.put(KeyMapper.mapper.get(key),new BasicDBObject("$lte",Integer.valueOf(value)));
+            }
+            return;
+        }
+
+
     }
 }

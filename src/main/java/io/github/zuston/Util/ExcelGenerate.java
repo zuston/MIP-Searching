@@ -65,7 +65,6 @@ public class ExcelGenerate {
 
         int count = 1;
         for (LinkedHashMap<String,String> hm:container){
-            System.out.println(count);
             Row rows = sheet.createRow(count);
             Cell cell0s = rows.createCell(0);
 //            cell0s.setCellValue(hm.get("original_id"));
@@ -82,7 +81,8 @@ public class ExcelGenerate {
 
         }
         String path = RedisSession.generateMd5(container.toString());
-        FileOutputStream fout = new FileOutputStream("/usr/local/Cellar/openresty/1.11.2.2_2/nginx/html/static/"+ path+".xls");
+//        FileOutputStream fout = new FileOutputStream("/usr/local/Cellar/openresty/1.11.2.2_2/nginx/html/static/"+ path+".xls");
+        FileOutputStream fout = new FileOutputStream("/temp/"+ path+".xls");
 //        FileOutputStream fout = new FileOutputStream("/opt/openresty/nginx/html/static/"+ path+".xls");
         workbook.write(fout);
         workbook.close();
