@@ -1,6 +1,6 @@
 package Test;
 
-import io.github.zuston.Service.BaseServiceV2;
+import io.github.zuston.Util.CoreConditionGenerator;
 
 import java.util.ArrayList;
 import java.util.Stack;
@@ -10,9 +10,9 @@ import java.util.Stack;
  */
 public class AnalysisExpressionTest {
     public static void main(String[] args) {
-        String testStr1 = "Zn&S&(sg=216)&(ve=8|18)";
-        System.out.println(BaseServiceV2.basicInfoFunction(testStr1,1,1));
-//        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1));
+        String testStr1 = "Si&Re^&(sg=139)";
+//        System.out.println(BaseServiceV2.basicInfoFunction(testStr1,1,1));
+        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1,0));
 //        System.out.println(indexArr("1A&2A&S&(space=1)&(ev=1:1:1)",'&'));
 //        System.out.println();
 //        BaseService.getInfo(testStr1,1,1);

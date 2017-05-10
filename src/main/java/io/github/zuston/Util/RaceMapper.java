@@ -8,7 +8,9 @@ import java.util.HashMap;
  * Created by zuston on 17/3/25.
  */
 public class RaceMapper {
+    // 族系列表
     public static ArrayList<String> race = getRace();
+    // 元素周期表所有元素
     public static HashMap<String,ArrayList<String>> hm = new HashMap<String, ArrayList<String>>();
     static {
         hm.put("1A",get1A());
@@ -18,7 +20,9 @@ public class RaceMapper {
         hm.put("5B",get5B());
         hm.put("6B",get6B());
         hm.put("7B",get7B());
-        hm.put("8B",get8B());
+        hm.put("8B1",get8B1());
+        hm.put("8B2",get8B2());
+        hm.put("8B3",get8B3());
         hm.put("1B",get1B());
         hm.put("2B",get2B());
         hm.put("3A",get3A());
@@ -27,6 +31,8 @@ public class RaceMapper {
         hm.put("6A",get6A());
         hm.put("7A",get7A());
     }
+    public static ArrayList<String> allElements = getAllElements();
+
 
     private static ArrayList<String> get6A() {
         return new ArrayList<String>(Arrays.asList(
@@ -63,7 +69,7 @@ public class RaceMapper {
                 "B",
                 "Al",
                 "Ga",
-                "Ln",
+                "In",
                 "Tl"
         ));
     }
@@ -82,6 +88,32 @@ public class RaceMapper {
                 "Ag",
                 "Au"
 
+        ));
+    }
+
+    private static ArrayList<String> get8B1() {
+        return new ArrayList<String>(Arrays.asList(
+                "Fe",
+                "Ru",
+                "Os",
+                "Hs"
+        ));
+    }
+
+    private static ArrayList<String> get8B2(){
+        return new ArrayList<String>(Arrays.asList(
+                "Co",
+                "Rh",
+                "Ir",
+                "Mt"
+        ));
+    }
+
+    private static ArrayList<String> get8B3(){
+        return new ArrayList<String>(Arrays.asList(
+                "Ni",
+                "Pd",
+                "Pt"
         ));
     }
 
@@ -222,7 +254,9 @@ public class RaceMapper {
         raceArr.add("5B");
         raceArr.add("6B");
         raceArr.add("7B");
-        raceArr.add("8B");
+        raceArr.add("8B1");
+        raceArr.add("8B2");
+        raceArr.add("8B3");
         raceArr.add("1B");
         raceArr.add("2B");
         raceArr.add("3A");
@@ -232,5 +266,15 @@ public class RaceMapper {
         raceArr.add("7A");
         return raceArr;
     }
+
+
+    public static ArrayList<String> getAllElements(){
+        ArrayList<String> allElementsList = new ArrayList<String>();
+        for (String value:race){
+            allElementsList.addAll(hm.get(value));
+        }
+        return allElementsList;
+    }
+
 
 }

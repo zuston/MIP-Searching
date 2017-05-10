@@ -125,7 +125,7 @@ public class AnalyExpression {
         int flag = -1;
         for(int i=0;i<s.length;i++){
             if (s[i]==tag){
-                if (i==1 || i==2){
+                if (i==1 || i==2||i==3){
                     flag = i;
                 }
                 String sb = "";

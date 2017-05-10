@@ -33,7 +33,7 @@ public class MainController {
 
     @RequestMapping(value = "/m/jsmol",produces = MediaType.TEXT_PLAIN_VALUE,method = RequestMethod.GET)
     public String jsmol(@RequestParam("id")String idd) throws IOException {
-        return BaseServiceV2.basicJsmolFunction(idd);
+        return BaseServiceV2.basicJsmolFunctionFromMongoDb(idd);
     }
 
     @RequestMapping(value = "/m/filedownload", method = RequestMethod.GET)

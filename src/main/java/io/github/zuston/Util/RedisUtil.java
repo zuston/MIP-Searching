@@ -38,7 +38,4 @@ public class RedisUtil {
         return value==null?"nullzero":value;
     }
 
-    public static void main(String[] args) {
-        System.out.println(getSearchCount("1002"));
-    }
 }

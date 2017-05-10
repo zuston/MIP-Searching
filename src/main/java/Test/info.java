@@ -11,8 +11,8 @@ import java.io.IOException;
 public class info {
     public static void main(String[] args) throws IOException {
 
-        getInfoV2();
-
+//        getInfoV2();
+        testFromMongo();
     }
 
 
@@ -49,5 +49,9 @@ public class info {
 
     public static void testInfo(){
         System.out.println(BaseServiceV2.basicJsmolFunctionFromMongoDb(""));
+    }
+
+    public static void testFromMongo(){
+        System.out.println(BaseServiceV2.basicJsmolFunctionFromMongoDb("590b2b34d3566a122b5be6c0"));
     }
 }

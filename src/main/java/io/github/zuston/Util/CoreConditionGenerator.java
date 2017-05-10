@@ -13,21 +13,29 @@ import static io.github.zuston.Util.AnalyExpression.indexArr;
  */
 public class CoreConditionGenerator {
     public static BasicDBObject coreContionGenertor(String formula,int flag){
+        // Na&K 的元素是否只是all还是in的关系
+//        int inFlag = String.valueOf(formula.toCharArray()[formula.length()-1]).equals("^")?1:0;
+//        if (inFlag==1){
+//            formula = formula.substring(0,formula.length()-1);
+//        }
+        int inFlag = formula.indexOf("^")>=0?1:0;
+        formula = formula.replace("^","");
         ArrayList<String> formualList = AnalyExpression.simpleAnaly(formula);
+        System.out.println("解析之后的表达式列表:"+formualList);
         BasicDBObject base = new BasicDBObject();
         if (formualList.size()>1){
             BasicDBList list = new BasicDBList();
             for (String oneFormula:formualList){
-                list.add(simpleConditionGenertor(oneFormula,flag));
+                list.add(simpleConditionGenertor(oneFormula,flag,inFlag));
             }
             base.put("$or",list);
         }else{
-            base = simpleConditionGenertor(formualList.get(0),flag);
+            base = simpleConditionGenertor(formualList.get(0),flag,inFlag);
         }
         return base;
     }
 
-    private static BasicDBObject simpleConditionGenertor(String expression,int flag) {
+    private static BasicDBObject simpleConditionGenertor(String expression,int flag,int inFlag) {
         ArrayList<String> race = new ArrayList<String>();
         BasicDBObject condition = new BasicDBObject();
 
@@ -37,16 +45,18 @@ public class CoreConditionGenerator {
          * TODO: 17/3/27 单元素可能会报错
          */
         ArrayList<String> andList = indexArr(expression,'&');
+        System.out.println("~的组合列表"+andList);
         /**
          * 否的列表，其中分为族系元素
          */
         ArrayList<String> notList = indexArr(expression,'~');
-        System.out.println(andList);
         if (andList.size()<=0){
             return null;
         }
 
+        // 指定元素list
         ArrayList<String> andShackList = new ArrayList<String>();
+        // 族系元素list
         ArrayList<String> andWaitList = new ArrayList<String>();
 
         for (String temp:andList){
@@ -86,6 +96,7 @@ public class CoreConditionGenerator {
                 conditionChildren.append(QueryOperators.NIN,RaceMapper.hm.get(key));
             }
         }
+        // 查询表达式中 没有not in的选项,并且是族系查找
         if (notList.size()<=0&&andWaitList.size()>0){
             ArrayList<String> sb = (ArrayList<String>) RaceMapper.race.clone();
             for (String key:andWaitList){
@@ -101,6 +112,18 @@ public class CoreConditionGenerator {
                 }
             }
             conditionChildren.append(QueryOperators.NIN,elements);
+        }
+        // 查询表达式中没有not in选项，并且不是族系查找，且inFlag=1
+
+        if (notList.size()<=0&&andWaitList.size()<=0&&andShackList.size()>0&&inFlag==1){
+            ArrayList<String> allElements = RaceMapper.getAllElements();
+            ArrayList<String> notInList = new ArrayList<String>();
+            for (String element:allElements){
+                if (andShackList.indexOf(element)<0){
+                    notInList.add(element);
+                }
+            }
+            conditionChildren.append(QueryOperators.NIN,notInList);
         }
         if (conditionChildren.size()>0){
             condition.put("pymatgen_poscar.structure.sites.label",conditionChildren);
@@ -204,5 +227,14 @@ public class CoreConditionGenerator {
         }
 
 
+    }
+
+    /**
+     * 排除某些元素之后 返回not in 的列表
+     * @param outElements
+     * @return
+     */
+    private static ArrayList<String> outElementsBy(ArrayList<String> outElements){
+        return null;
     }
 }

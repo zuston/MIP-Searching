@@ -39,19 +39,23 @@ public class BaseServiceV2 {
      */
     private static String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
 
-        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
-        if (!redisJson.equals("error")){
-            System.out.println("命中json");
-            return redisJson;
-        }
+//        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
+//        if (!redisJson.equals("error")){
+//            System.out.println("命中json");
+//            return redisJson;
+//        }
+
+        long dataBaseCount = latestBasicCollection.count();
 
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = 0;
-        long redisCount = RedisUtil.getSearchCount(expression);
+//        long redisCount = RedisUtil.getSearchCount(expression);
+        long redisCount = -1;
         if (redisCount==-1){
+            System.out.println("未命中缓存");
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
             System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
@@ -136,8 +140,10 @@ public class BaseServiceV2 {
         }
         dataSuffix.append(",\"count\":");
         dataSuffix.append(totalCount);
+        dataSuffix.append(",\"allCount\":");
+        dataSuffix.append(dataBaseCount);
         dataSuffix.append("}");
-        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page),dataSuffix.toString());
+//        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page),dataSuffix.toString());
         return dataSuffix.toString();
     }
 
@@ -260,13 +266,13 @@ public class BaseServiceV2 {
      * @return
      */
     public static String basicJsmolFunctionFromMongoDb(String idd){
-        String id = (String) latestBasicCollection.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("original_id");
-        return getStringFromMongo(id,"poscar");
+        String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("caculate_meta_id").toString();
+        System.out.println(caculateMetaId);
+        return getStringFromMongo(caculateMetaId,"poscar");
     }
 
-    private static String getStringFromMongo(String mid,String columnName){
-        Pattern pattern = Pattern.compile("^" + mid + ".*$", Pattern.CASE_INSENSITIVE);
-        Document document = caculateMetaCollection.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern))).limit(1).first();
+    private static String getStringFromMongo(String caculateMetaId,String columnName){
+        Document document = caculateMetaCollection.find(new BasicDBObject("_id",new ObjectId(caculateMetaId))).limit(1).first();
         if (document==null){
             return "error";
         }
@@ -291,8 +297,9 @@ public class BaseServiceV2 {
      * 新版直接从mongo中读取
      * poscar static relax 文件下载
      */
-    public static void basicFileDownloadFunction(HttpServletResponse res,String mid,String columnName){
-        String v = getStringFromMongo(mid,columnName);
+    public static void basicFileDownloadFunction(HttpServletResponse res,String extractId,String columnName){
+        String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(extractId))).limit(1).first().get("caculate_meta_id").toString();
+        String v = getStringFromMongo(caculateMetaId,columnName);
         FileDownLoadUtil.generateDownloadResponseByString(v,res,columnName);
     }
 }
