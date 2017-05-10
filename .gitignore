@@ -1,2 +1,3 @@
 target/
 .idea/
+resource/mongo.properties
