@@ -12,7 +12,8 @@ public class info {
     public static void main(String[] args) throws IOException {
 
 //        getInfoV2();
-        testFromMongo();
+//        testFromMongo();
+        allCalculate();
     }
 
 
@@ -53,5 +54,10 @@ public class info {
 
     public static void testFromMongo(){
         System.out.println(BaseServiceV2.basicJsmolFunctionFromMongoDb("590b2b34d3566a122b5be6c0"));
+    }
+
+    public static void allCalculate(){
+        String res = BaseServiceV2.basicGetAllCalculate("(sg=216)",0);
+        System.out.println(res);
     }
 }

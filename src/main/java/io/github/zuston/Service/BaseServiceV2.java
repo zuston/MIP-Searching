@@ -31,6 +31,64 @@ public class BaseServiceV2 {
         return basicInfoAppendFunction(basicDBObject,page,expression,flag);
     }
 
+    public static String basicGetAllCalculate(String expression,int flag){
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        return basicAllCalculateFunction(basicDBObject,expression,flag);
+    }
+
+    private static String basicAllCalculateFunction(BasicDBObject base, String expression, int tag) {
+        long dataBaseCount = latestBasicCollection.count();
+
+        if (base==null){
+            return ErrorMapper.ElementLackError();
+        }
+        long totalCount = 0;
+        long redisCount = RedisUtil.getSearchCount(expression);
+        if (redisCount==-1){
+            System.out.println("未命中缓存");
+            long time = System.currentTimeMillis();
+            totalCount = latestBasicCollection.count(base);
+            System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
+            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+        }else{
+            System.out.println("命中缓存");
+            totalCount = redisCount;
+        }
+
+        if (totalCount==0){
+            return ErrorMapper.NoDataError();
+        }
+
+        StringBuilder jsonAppendString = new StringBuilder("{\"count\":");
+        jsonAppendString.append(totalCount);
+
+        jsonAppendString.append(",\"c\":[");
+
+        boolean flag = false;
+
+        long time1 = System.currentTimeMillis();
+        for(Document document:latestBasicCollection.find(base)){
+            String id = (String) document.get("original_id");
+
+            if(true){
+
+                String endStr = "{\"original_id\":\"" +  id + "\"}";
+                jsonAppendString.append(endStr).append(",");
+                flag = true;
+            }
+        }
+
+        StringBuilder dataSuffix = new StringBuilder();
+        if (flag==true){
+            String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
+            dataSuffix.append(jsonStrTemp+"]");
+        }else{
+            dataSuffix.append(jsonAppendString+"]");
+        }
+        dataSuffix.append("}");
+        return dataSuffix.toString();
+    }
+
     /**
      * 根据condition，查找出结果拼接成 json string
      * @param base
@@ -77,7 +135,7 @@ public class BaseServiceV2 {
         boolean flag = false;
 
         long time1 = System.currentTimeMillis();
-        for(Document document:latestBasicCollection.find(base).skip((page-1)*10).limit(10)){
+        for(Document document:latestBasicCollection.find(base).skip((page-1)*30).limit(30)){
             String id = (String) document.get("original_id");
 
             if(true){
@@ -191,6 +249,11 @@ public class BaseServiceV2 {
         StringBuilder jsonAppendString = new StringBuilder("{\"basic\":");
         for(Document document:extraColletion.find(condition).limit(1)){
             String mid = (String) document.get("m_id");
+
+            ObjectId calculateMetaId = (ObjectId)document.get("caculate_meta_id");
+            Document calculateDoc = caculateMetaCollection.find(new BasicDBObject("_id",calculateMetaId)).limit(1).first();
+            String jobId = String.valueOf(calculateDoc.get("jobid"));
+
             String original_id = mid.split("-")[0]+"-"+mid.split("-")[1];
 
             Document basic = null;
@@ -203,6 +266,7 @@ public class BaseServiceV2 {
             if (basic!=null){
                 jsonAppendString.append(",\"extract\":");
                 jsonAppendString.append(document.toJson());
+                jsonAppendString.append(",\"jobid\":"+jobId);
             }
         }
         jsonAppendString.append("}");

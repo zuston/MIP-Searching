@@ -26,6 +26,12 @@ public class MainController {
         return BaseServiceV2.basicInfoFunction(expression,page,flag);
     }
 
+    @RequestMapping(value = "/m/calculate",method = RequestMethod.GET)
+    public String calculate(@RequestParam("expression")String expression,@RequestParam("computed")int flag){
+        expression = expression.replace("#","|");
+        return BaseServiceV2.basicGetAllCalculate(expression,flag);
+    }
+
     @RequestMapping(value = "/m/download", method = RequestMethod.GET)
     public void download(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
         BaseServiceV2.basicExcelDownloadFunction(res,expression,flag);
@@ -46,6 +52,11 @@ public class MainController {
         return RedisUtil.getValue(token+"Info");
     }
 
+    @RequestMapping(value = "/m/info",method = RequestMethod.GET)
+    public String info(@RequestParam("id")String id){
+        return BaseServiceV2.basicDetailInfoFunction(id);
+    }
+
 
     /**
      * V1 版本废弃
@@ -60,15 +71,6 @@ public class MainController {
         return BaseService.getBiliInfo(bili,biliNumber,page,flag);
     }
 
-    /**
-     * V1 版本废弃
-     * @param id
-     * @return
-     */
-    @RequestMapping(value = "/m/info",method = RequestMethod.GET)
-    public String info(@RequestParam("id")String id){
-        return BaseServiceV2.basicDetailInfoFunction(id);
-    }
 
 
 

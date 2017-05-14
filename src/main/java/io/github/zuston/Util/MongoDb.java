@@ -24,6 +24,8 @@ public class MongoDb {
     public static String pwd = config.get("pwd");
 
 
+
+
     public volatile static MongoDatabase mongoDatabase = null;
 
     public MongoDb() {
