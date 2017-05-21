@@ -25,7 +25,6 @@ public class MongoDb {
 
 
 
-
     public volatile static MongoDatabase mongoDatabase = null;
 
     public MongoDb() {

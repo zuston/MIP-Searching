@@ -46,6 +46,7 @@ public class CoreConditionGenerator {
          */
         ArrayList<String> andList = indexArr(expression,'&');
         System.out.println("~的组合列表"+andList);
+
         /**
          * 否的列表，其中分为族系元素
          */

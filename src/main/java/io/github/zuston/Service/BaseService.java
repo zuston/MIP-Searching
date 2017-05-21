@@ -583,7 +583,7 @@ public class BaseService {
                 container.add(hm);
             }
         }
-        return ExcelGenerate.excelGenerate(container);
+        return ExcelGenerate.excelGenerateToFile(container);
     }
 
     public static String getJSmolInfo(String idd){

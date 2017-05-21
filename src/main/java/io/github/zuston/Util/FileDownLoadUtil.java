@@ -36,6 +36,30 @@ public class FileDownLoadUtil {
         }
     }
 
+    public static void generateDownloadResponseByBytes(byte[] bytevalue, HttpServletResponse res,String fileName){
+        res.setHeader("content-type", "application/octet-stream");
+        res.setContentType("application/octet-stream");
+        res.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+        byte[] buff = new byte[1024];
+        BufferedInputStream bis = null;
+        OutputStream os = null;
+        try {
+            os = res.getOutputStream();
+            os.write(bytevalue,0,bytevalue.length);
+            os.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (bis != null) {
+                try {
+                    bis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     public static void generateDownloadResponseByString(String value, HttpServletResponse res,String fileName){
         res.setHeader("content-type", "application/octet-stream");
         res.setContentType("application/octet-stream");

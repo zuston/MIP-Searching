@@ -57,6 +57,18 @@ public class MainController {
         return BaseServiceV2.basicDetailInfoFunction(id);
     }
 
+    @RequestMapping(value = "/m/imgload",method = RequestMethod.GET)
+    public void imgload(HttpServletResponse response,@RequestParam("jobid")String jobid,@RequestParam("type")int type) throws IOException {
+        BaseServiceV2.basicImgLoad(response,jobid,type);
+    }
+
+    @RequestMapping(value = "/m/poscarDownload", method = RequestMethod.GET)
+    public void poscarDownload(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
+        BaseServiceV2.basicPoscarDownloadFunction(res,expression,flag);
+    }
+
+
+
 
     /**
      * V1 版本废弃

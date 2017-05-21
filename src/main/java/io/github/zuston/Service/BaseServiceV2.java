@@ -2,6 +2,7 @@ package io.github.zuston.Service;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
+import io.github.zuston.Helper.ZipHelper;
 import io.github.zuston.Util.*;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -13,7 +14,9 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.zip.ZipOutputStream;
 
 import static io.github.zuston.Service.BaseService.mongoDataBase;
 
@@ -146,16 +149,17 @@ public class BaseServiceV2 {
                 String simplified_name = (String) document.get("simplified_name");
 //                String initStr = document.toJson().substring(0,document.toJson().length()-1);
 
-                String computedString = ",\"computed\":" +  document.get("is_computed") + "";
+//                String computedString = ",\"computed\":" +  document.get("is_computed") + "";
 
                 String bandGap = "";
                 String extractJobIdStr = "";
-                if ((Integer)document.get("is_computed")==1){
-                    Document extract = null;
+                Document extract = null;
+
+                if (true){
                     ArrayList<String> idList = new ArrayList<String>();
                     Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
                     int count = 0;
-                    for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","static.test_scan"))){
+                    for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","scf.test_scan"))){
                         if (count==0){
                             // 只取第一个数的计算结果bandGap
                             extract = document1;
@@ -176,7 +180,7 @@ public class BaseServiceV2 {
                     System.out.println(extractJobIdStr);
                 }
 
-//                String computedString = ",\"computed\":" +  (extract!=null?1:0) + "";
+                String computedString = ",\"computed\":" +  (extract!=null?1:0) + "";
 
                 String original_id = ",\"original_id\":\"" +  id + "\"";
                 String oid = ",\"id\":\"" +  document.get("_id") + "\"";
@@ -215,12 +219,12 @@ public class BaseServiceV2 {
      */
     public static void basicExcelDownloadFunction(HttpServletResponse res,String expression,int flag) throws IOException, NoSuchAlgorithmException {
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
-        String fileName = excelGenerate(basicDBObject);
-        FileDownLoadUtil.generateDownloadResponseByFile(fileName,res,"/temp");
+        byte[] valueByte = excelGenerate(basicDBObject);
+        FileDownLoadUtil.generateDownloadResponseByBytes(valueByte,res,"excelResults.xls");
     }
 
 
-    private static String excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
+    private static byte[] excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
         ArrayList<LinkedHashMap<String,String>> container = new ArrayList<LinkedHashMap<String, String>>();
         for (Document document:latestBasicCollection.find(base)){
             String id = (String) document.get("original_id");
@@ -236,7 +240,7 @@ public class BaseServiceV2 {
                 container.add(hm);
             }
         }
-        return ExcelGenerate.excelGenerate(container);
+        return ExcelGenerate.excelGenerateToByte(container);
     }
 
     public static String basicDetailInfoFunction(String id) {
@@ -342,7 +346,7 @@ public class BaseServiceV2 {
         }
 
         Document one = (Document) document.get("childs");
-        Document two = (Document) one.get("static");
+        Document two = (Document) one.get("scf");
         Document three = (Document) two.get("childs");
         Document four = (Document) three.get("test_scan");
         Document five = (Document) four.get("childs");
@@ -365,5 +369,74 @@ public class BaseServiceV2 {
         String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(extractId))).limit(1).first().get("caculate_meta_id").toString();
         String v = getStringFromMongo(caculateMetaId,columnName);
         FileDownLoadUtil.generateDownloadResponseByString(v,res,columnName);
+    }
+
+    /**
+     * 图片从库中读取
+     * @param response
+     * @param jobid
+     * @param type
+     */
+    public static void basicImgLoad(HttpServletResponse response, String jobid, int type) throws IOException {
+        Document document = caculateMetaCollection.find(new BasicDBObject("jobid",jobid)).limit(1).first();
+        Document one = (Document) document.get("childs");
+//        Document two = (Document) one.get("scf");
+//        Document three = (Document) two.get("childs");
+//        Document four = (Document) three.get("test_scan");
+//        Document five = (Document) four.get("childs");
+
+        String columnName = type==1?"bsimg_png":"dosimg_png";
+        Document six = (Document) one.get(columnName);
+        String fid = six.get("f_id").toString();
+
+        Document document1 = smallFileCollection.find(new BasicDBObject("_id",new ObjectId(fid))).limit(1).first();
+
+        Binary bb = (Binary) document1.get("data");
+
+        response.setContentType("image/*"); // 设置返回的文件类型
+        OutputStream toClient = response.getOutputStream(); // 得到向客户端输出二进制数据的对象
+        toClient.write(bb.getData()); // 输出数据
+        toClient.close();
+    }
+
+    /**
+     * 计算结果中，poscar下载
+     * @param response
+     * @param expression
+     * @param flag
+     */
+    public static void basicPoscarDownloadFunction(HttpServletResponse response, String expression, int flag) throws IOException {
+        String zipName = "poscarResults.zip";
+        response.setContentType("APPLICATION/OCTET-STREAM");
+        response.setHeader("Content-Disposition","attachment; filename="+zipName);
+        ZipOutputStream out = new ZipOutputStream(response.getOutputStream());
+        try {
+            LinkedHashMap<String,byte[]> hm = getPoscarFromExpression(expression,flag);
+            ArrayList<byte[]> poscarList = new ArrayList<byte[]>();
+            ArrayList<String> nameList = new ArrayList<String>();
+            for (Map.Entry<String,byte[]> mm:hm.entrySet()){
+                poscarList.add(mm.getValue());
+                nameList.add(mm.getKey());
+            }
+            ZipHelper.doCompress(poscarList,nameList,out);
+            response.flushBuffer();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally{
+            out.close();
+        }
+    }
+
+    private static LinkedHashMap<String,byte[]> getPoscarFromExpression(String expression,int flag){
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        ArrayList<byte[]> res = new ArrayList<byte[]>();
+        LinkedHashMap<String,byte[]> result = new LinkedHashMap<String, byte[]>();
+        for (Document document:latestBasicCollection.find(basicDBObject)){
+            String valuePoscar = (String) document.get("poscar");
+            String name = (String) document.get("simplified_name");
+            String objectid = (String) document.get("_id").toString();
+            result.put(name+"-"+objectid,valuePoscar.getBytes());
+        }
+        return result;
     }
 }

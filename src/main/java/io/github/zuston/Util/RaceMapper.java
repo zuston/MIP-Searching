@@ -30,8 +30,21 @@ public class RaceMapper {
         hm.put("5A",get5A());
         hm.put("6A",get6A());
         hm.put("7A",get7A());
+        hm.put("8A",get8A());
     }
     public static ArrayList<String> allElements = getAllElements();
+
+
+    private static ArrayList<String> get8A(){
+        return new ArrayList<String>(Arrays.asList(
+            "He",
+            "Ne",
+                "Ar",
+                "Kr",
+                "Xe",
+                "Rn"
+        ));
+    }
 
 
     private static ArrayList<String> get6A() {
@@ -264,6 +277,7 @@ public class RaceMapper {
         raceArr.add("5A");
         raceArr.add("6A");
         raceArr.add("7A");
+        raceArr.add("8A");
         return raceArr;
     }
 

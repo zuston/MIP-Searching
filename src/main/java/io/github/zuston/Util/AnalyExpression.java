@@ -1,6 +1,8 @@
 package io.github.zuston.Util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Stack;
 
 /**
@@ -148,6 +150,22 @@ public class AnalyExpression {
                 sb+=s[i];
             }
             res.add(sb);
+        }
+        if (res.size()==0&&tag=='&'){
+            HashMap<String,ArrayList<String>> hm = RaceMapper.hm;
+            ArrayList<String> raceList = RaceMapper.race;
+            if (raceList.contains(str)){
+                res.add(str);
+                return res;
+            }
+            for (Map.Entry<String,ArrayList<String>> value:hm.entrySet() ){
+                for (String v:value.getValue()){
+                    if (v.equals(str)){
+                        res.add(str);
+                        return res;
+                    }
+                }
+            }
         }
         return res;
     }
