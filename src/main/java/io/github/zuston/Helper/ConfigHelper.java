@@ -10,7 +10,7 @@ import java.util.Properties;
  */
 
 public class ConfigHelper {
-    public static HashMap<String,String> getDbConfig(){
+    public static HashMap<String,String> getDbConfig() {
         String filename = "mongo.properties";
         Properties prop = PropertyUtil.loadProperty(filename);
         String port = PropertyUtil.getString(prop,"port");

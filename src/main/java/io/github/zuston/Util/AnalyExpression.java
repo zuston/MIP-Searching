@@ -1,5 +1,8 @@
 package io.github.zuston.Util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +12,7 @@ import java.util.Stack;
  * Created by zuston on 17-3-28.
  */
 public class AnalyExpression {
+    public final static Logger logger = LoggerFactory.getLogger(AnalyExpression.class);
     public static ArrayList<String> simpleAnaly(String str){
         Stack<Character> stack = new Stack<Character>();
         char [] strChar = str.toCharArray();
@@ -16,7 +20,6 @@ public class AnalyExpression {
         StringBuilder sb = new StringBuilder();
         ArrayList<String> arr = new ArrayList<String>();
         for (char c:strChar){
-
 
             if (c==')'){
                 sb = new StringBuilder();
@@ -39,9 +42,10 @@ public class AnalyExpression {
             sb.append(stack.pop());
         }
         sb = sb.reverse();
-        System.out.println("搜索表达式:"+str);
+
+        logger.info("搜索表达式:{}",str);
         // arr 代表括号里面的元素
-        System.out.println("括号里面的元素："+arr);
+        logger.info("括号内元素:{}",arr);
         // arr 里面含有spaceGroup等筛选信息
         ArrayList<String> filterInfo = new ArrayList<String>();
         // arr 里面进行表达式组合的信息
@@ -57,9 +61,9 @@ public class AnalyExpression {
                 componentInfo.add(i);
             }
         }
-        System.out.println("括号内筛选元素:"+filterInfo);
-        System.out.println("括号外面的元素："+sb);
-        System.out.println("筛选拆分的组合:"+conditionSplitComponent);
+        logger.info("括号内筛选元素:{}",filterInfo);
+        logger.info("括号外面的元素:{}",sb);
+        logger.info("筛选拆分的组合:{}",conditionSplitComponent);
 
         ArrayList<String> gres = new ArrayList<String>();
 
@@ -108,7 +112,7 @@ public class AnalyExpression {
             }
         }
 
-        System.out.println("最后的分析语句结果集:"+conditionRes);
+        logger.info("搜索语句分析结果集:{}",conditionRes);
         return conditionRes;
 
     }

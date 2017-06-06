@@ -1,6 +1,9 @@
 package io.github.zuston.Util;
 
-import java.io.FileNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -9,19 +12,34 @@ import java.util.Properties;
  * Created by zuston on 17/5/10.
  */
 public class PropertyUtil {
-    public static Properties loadProperty(String filename){
+    public final static Logger LOGGER = LoggerFactory.getLogger(PropertyUtil.class);
+    public static Properties loadProperty(String filename) {
+        String outPath = "/opt/";
         Properties prop = new Properties();
-        InputStream ins = Thread.currentThread().getContextClassLoader().getResourceAsStream(filename);
-        try {
-            if(ins==null){
-                throw new FileNotFoundException("file not exsit");
+        InputStream ins =null;
+        ins = Thread.currentThread().getContextClassLoader().getResourceAsStream(filename);
+        if (ins==null){
+            try {
+                ins = new FileInputStream(outPath+filename);
+                LOGGER.info("加载/opt/下的mongo配置文件");
+                prop.load(ins);
+                ins.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                return prop;
             }
-            prop.load(ins);
-            ins.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-            return prop;
+        } else{
+            try {
+                prop.load(ins);
+                LOGGER.info("加载项目下的mongo配置文件");
+                ins.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                return prop;
+            }
+
         }
     }
 

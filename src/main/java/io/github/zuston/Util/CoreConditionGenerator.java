@@ -3,6 +3,8 @@ package io.github.zuston.Util;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.QueryOperators;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
@@ -12,16 +14,13 @@ import static io.github.zuston.Util.AnalyExpression.indexArr;
  * Created by zuston on 17/5/2.
  */
 public class CoreConditionGenerator {
+    public final static Logger LOGGER = LoggerFactory.getLogger(CoreConditionGenerator.class);
     public static BasicDBObject coreContionGenertor(String formula,int flag){
-        // Na&K 的元素是否只是all还是in的关系
-//        int inFlag = String.valueOf(formula.toCharArray()[formula.length()-1]).equals("^")?1:0;
-//        if (inFlag==1){
-//            formula = formula.substring(0,formula.length()-1);
-//        }
+
         int inFlag = formula.indexOf("^")>=0?1:0;
         formula = formula.replace("^","");
         ArrayList<String> formualList = AnalyExpression.simpleAnaly(formula);
-        System.out.println("解析之后的表达式列表:"+formualList);
+        LOGGER.info("解析之后的表达式列表:{}",formualList);
         BasicDBObject base = new BasicDBObject();
         if (formualList.size()>1){
             BasicDBList list = new BasicDBList();
@@ -45,7 +44,7 @@ public class CoreConditionGenerator {
          * TODO: 17/3/27 单元素可能会报错
          */
         ArrayList<String> andList = indexArr(expression,'&');
-        System.out.println("~的组合列表"+andList);
+        LOGGER.info("~的组合列表:{}",andList);
 
         /**
          * 否的列表，其中分为族系元素
@@ -132,10 +131,7 @@ public class CoreConditionGenerator {
         if (flag==1){
             condition.put("is_computed",1);
         }
-        System.out.println();
-        System.out.println("筛选条件语句:");
-        System.out.println(condition);
-        System.out.println();
+        LOGGER.info("生成的condition:{}",condition);
         return condition;
     }
 

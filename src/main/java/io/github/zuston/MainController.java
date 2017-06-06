@@ -32,6 +32,12 @@ public class MainController {
         return BaseServiceV2.basicGetAllCalculate(expression,flag);
     }
 
+    @RequestMapping(value = "/m/randomcalculate",method = RequestMethod.GET)
+    public String rcalculate(@RequestParam("expression")String expression,@RequestParam("computed")int flag){
+        expression = expression.replace("#","|");
+        return BaseServiceV2.basicGetRandomCalculate(expression,flag);
+    }
+
     @RequestMapping(value = "/m/download", method = RequestMethod.GET)
     public void download(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
         BaseServiceV2.basicExcelDownloadFunction(res,expression,flag);
@@ -65,6 +71,31 @@ public class MainController {
     @RequestMapping(value = "/m/poscarDownload", method = RequestMethod.GET)
     public void poscarDownload(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
         BaseServiceV2.basicPoscarDownloadFunction(res,expression,flag);
+    }
+
+    @RequestMapping(value = "/m/testjsmol",method = RequestMethod.GET,produces = MediaType.TEXT_PLAIN_VALUE)
+    public String tjsmol(){
+        BufferedReader br = null;
+        StringBuffer sb = null;
+        try {
+            br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/zuston/Downloads/F7.bxsf"))); //这里可以控制编码
+            sb = new StringBuffer();
+            String line = null;
+            while((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                br.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        String data = new String(sb); //StringBuffer ==> String
+        return data;
     }
 
 

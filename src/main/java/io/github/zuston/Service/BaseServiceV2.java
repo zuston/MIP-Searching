@@ -3,10 +3,12 @@ package io.github.zuston.Service;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import io.github.zuston.Helper.ZipHelper;
+import io.github.zuston.Listener.DbInitListener;
 import io.github.zuston.Util.*;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -18,29 +20,109 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.zip.ZipOutputStream;
 
-import static io.github.zuston.Service.BaseService.mongoDataBase;
 
 /**
  * Created by zuston on 17/5/2.
  */
 public class BaseServiceV2 {
-    public static MongoCollection<Document> latestBasicCollection = mongoDataBase.getCollection("pfsas20170501");
-    public static MongoCollection<Document> extraColletion = mongoDataBase.getCollection("extract");
-    public static MongoCollection<Document> caculateMetaCollection = mongoDataBase.getCollection("caculate_meta");
-    public static MongoCollection<Document> smallFileCollection = mongoDataBase.getCollection("small_files");
+
+    public final static org.slf4j.Logger logger = LoggerFactory.getLogger(BaseServiceV2.class);
+
+    public static MongoCollection<Document> latestBasicCollection = DbInitListener.latestBasicCollection;
+    public static MongoCollection<Document> extraColletion = DbInitListener.extraColletion;
+    public static MongoCollection<Document> caculateMetaCollection = DbInitListener.caculateMetaCollection;
+    public static MongoCollection<Document> smallFileCollection = DbInitListener.smallFileCollection;
 
     public static String basicInfoFunction(String expression, int page,int flag) {
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        logger.info("===================");
         return basicInfoAppendFunction(basicDBObject,page,expression,flag);
     }
 
     public static String basicGetAllCalculate(String expression,int flag){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        logger.info("===================");
         return basicAllCalculateFunction(basicDBObject,expression,flag);
     }
 
+    public static String basicGetRandomCalculate(String expression,int flag){
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
+        logger.info("===================");
+        return basicRandomCalculateFunction(basicDBObject,expression,flag);
+    }
+
+    private static String basicRandomCalculateFunction(BasicDBObject base, String expression, int tag) {
+
+        boolean randomFlag = true;
+        if (base==null){
+            return ErrorMapper.ElementLackError();
+        }
+        long totalCount = 0;
+        long redisCount = RedisUtil.getSearchCount(expression);
+        if (redisCount==-1){
+            long time = System.currentTimeMillis();
+            totalCount = latestBasicCollection.count(base);
+
+            randomFlag = totalCount>300?true:false;
+
+            logger.info("未命中缓存，统计耗时:{}",System.currentTimeMillis()-time);
+
+            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+        }else{
+            logger.info("命中缓存");
+            totalCount = redisCount;
+        }
+
+        if (totalCount==0){
+            return ErrorMapper.NoDataError();
+        }
+
+        StringBuilder jsonAppendString = new StringBuilder("{\"count\":");
+        jsonAppendString.append(totalCount);
+
+        jsonAppendString.append(",\"c\":[");
+
+        boolean flag = false;
+
+        long time1 = System.currentTimeMillis();
+
+        int randomSum = 300;
+        for(Document document:latestBasicCollection.find(base)){
+
+            if (randomFlag){
+                if (randomSum<=0){
+                    break;
+                }
+                int randomValue = ((int) (Math.random()*1000))%2;
+
+                if (randomValue==0){
+                    continue;
+                }
+                randomSum--;
+            }
+
+            String id = (String) document.get("original_id");
+
+            if(true){
+
+                String endStr = "{\"original_id\":\"" +  id + "\"}";
+                jsonAppendString.append(endStr).append(",");
+                flag = true;
+            }
+        }
+
+        StringBuilder dataSuffix = new StringBuilder();
+        if (flag==true){
+            String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
+            dataSuffix.append(jsonStrTemp+"]");
+        }else{
+            dataSuffix.append(jsonAppendString+"]");
+        }
+        dataSuffix.append("}");
+        return dataSuffix.toString();
+    }
+
     private static String basicAllCalculateFunction(BasicDBObject base, String expression, int tag) {
-        long dataBaseCount = latestBasicCollection.count();
 
         if (base==null){
             return ErrorMapper.ElementLackError();
@@ -48,13 +130,14 @@ public class BaseServiceV2 {
         long totalCount = 0;
         long redisCount = RedisUtil.getSearchCount(expression);
         if (redisCount==-1){
-            System.out.println("未命中缓存");
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
-            System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
+
+            logger.info("未命中缓存，统计耗时:{}",System.currentTimeMillis()-time);
+
             RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
         }else{
-            System.out.println("命中缓存");
+            logger.info("命中缓存");
             totalCount = redisCount;
         }
 
@@ -116,13 +199,12 @@ public class BaseServiceV2 {
 //        long redisCount = RedisUtil.getSearchCount(expression);
         long redisCount = -1;
         if (redisCount==-1){
-            System.out.println("未命中缓存");
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
-            System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
-            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+//            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+            logger.info("未命中缓存,统计耗时:{}",System.currentTimeMillis()-time);
         }else{
-            System.out.println("命中缓存");
+            logger.info("命中缓存");
             totalCount = redisCount;
         }
 
@@ -155,7 +237,7 @@ public class BaseServiceV2 {
                 String extractJobIdStr = "";
                 Document extract = null;
 
-                if (true){
+                if (tag<2){
                     ArrayList<String> idList = new ArrayList<String>();
                     Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
                     int count = 0;
@@ -177,7 +259,6 @@ public class BaseServiceV2 {
                         extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
                         extractJobIdStr += "]";
                     }
-                    System.out.println(extractJobIdStr);
                 }
 
                 String computedString = ",\"computed\":" +  (extract!=null?1:0) + "";
@@ -192,7 +273,7 @@ public class BaseServiceV2 {
             }
         }
 
-        System.out.println("skip获取:"+(System.currentTimeMillis()-time1));
+        logger.info("skip获取所用时间:{}",System.currentTimeMillis()-time1);
         StringBuilder dataSuffix = new StringBuilder();
         if (flag==true){
             String jsonStrTemp = jsonAppendString.substring(0,jsonAppendString.length()-1);
@@ -246,6 +327,7 @@ public class BaseServiceV2 {
     public static String basicDetailInfoFunction(String id) {
         BasicDBObject condition = new BasicDBObject();
         condition.put("_id", new ObjectId(id));
+        logger.info("===================");
         return detailInfoById(condition);
     }
 
@@ -283,9 +365,6 @@ public class BaseServiceV2 {
      * @return
      */
     public static String basicJsmolFunction(String idd){
-//        String id = (String) latestBasicCollection.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("original_id");
-//
-//        Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
         Document document = extraColletion.find(new BasicDBObject("_id",new ObjectId(idd)).append("source_path","static.test_scan")).limit(1).first();
         if (document==null){
             return "error";
@@ -335,8 +414,9 @@ public class BaseServiceV2 {
      */
     public static String basicJsmolFunctionFromMongoDb(String idd){
         String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("caculate_meta_id").toString();
-        System.out.println(caculateMetaId);
-        return getStringFromMongo(caculateMetaId,"poscar");
+        logger.info("渲染jsmol[caculateMetaId:{}]",caculateMetaId);
+        logger.info("===================");
+        return getStringFromMongo(caculateMetaId,"bposcar");
     }
 
     private static String getStringFromMongo(String caculateMetaId,String columnName){
@@ -380,10 +460,7 @@ public class BaseServiceV2 {
     public static void basicImgLoad(HttpServletResponse response, String jobid, int type) throws IOException {
         Document document = caculateMetaCollection.find(new BasicDBObject("jobid",jobid)).limit(1).first();
         Document one = (Document) document.get("childs");
-//        Document two = (Document) one.get("scf");
-//        Document three = (Document) two.get("childs");
-//        Document four = (Document) three.get("test_scan");
-//        Document five = (Document) four.get("childs");
+
 
         String columnName = type==1?"bsimg_png":"dosimg_png";
         Document six = (Document) one.get(columnName);

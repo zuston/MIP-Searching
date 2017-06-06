@@ -17,12 +17,11 @@ public class MongoDb {
 
     public static HashMap<String,String> config = ConfigHelper.getDbConfig();
     public static String host = config.get("host");
-    public static int    port = Integer.valueOf(config.get("port"));
+    public static Integer port = Integer.valueOf(config.get("port"));
     public static String dbName = config.get("dbName");
 
     public static String username = config.get("username");
     public static String pwd = config.get("pwd");
-
 
 
     public volatile static MongoDatabase mongoDatabase = null;
