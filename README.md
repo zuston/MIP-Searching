@@ -1,4 +1,5 @@
 # material-platform
+![Build Status](https://api.travis-ci.org/zuston/MIP-Searching.svg?branch=master)
 
 ### 项目采用内网连接数据库方式
 ### 直接新建 /opt/mongo.properties 文件 
