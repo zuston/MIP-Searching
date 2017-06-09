@@ -458,14 +458,14 @@ public class BaseServiceV2 {
      * @param type
      */
     public static void basicImgLoad(HttpServletResponse response, String jobid, int type) throws IOException {
-        Document document = caculateMetaCollection.find(new BasicDBObject("jobid",jobid)).limit(1).first();
+        Document document = caculateMetaCollection.find(new BasicDBObject("jobid",Integer.valueOf(jobid))).limit(1).first();
         Document one = (Document) document.get("childs");
 
 
         String columnName = type==1?"bsimg_png":"dosimg_png";
         Document six = (Document) one.get(columnName);
         String fid = six.get("f_id").toString();
-
+        System.out.println(fid);
         Document document1 = smallFileCollection.find(new BasicDBObject("_id",new ObjectId(fid))).limit(1).first();
 
         Binary bb = (Binary) document1.get("data");
