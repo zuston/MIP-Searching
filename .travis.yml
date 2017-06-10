@@ -1,4 +1,13 @@
 language: java
-
 jdk:
   - oraclejdk8
+before_install:
+  - openssl aes-256-cbc -K $encrypted_1742decd4d2b_key -iv $encrypted_1742decd4d2b_iv
+  - in id_rsa.enc -out ~\/.ssh/id_rsa -d
+  - chmod 600 ~/.ssh/id_rsa
+  - echo -e "Host 202.121.197.76\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+script:
+  - mvn package
+after_success:
+  - scp target/materialSpringBoot-1.0-SNAPSHOT.war root@202.121.197.76:/home/nova/MIP-JAVA-V2  # 复制到生产服务器上
+  - ssh root@202.121.197.76 'killall java && nohup java -jar /home/nova/MIP-JAVA-V2/materialSpringBoot-1.0-SNAPSHOT.war &'
