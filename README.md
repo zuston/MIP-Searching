@@ -10,3 +10,10 @@ username=root
 pwd=1qaz2wsx3edc  
 
 ### mvn clean package 即可打包部署
+
+***
+
+### WorkFlow DataFormat
+[workFlow wiki](https://github.com/zuston/MIP-Searching/wiki/WorkFlow-DataFormat-Design)  
+
+[workFlow file](https://github.com/zuston/MIP-Searching/blob/master/src/main/java/workflow/workflow.json)
