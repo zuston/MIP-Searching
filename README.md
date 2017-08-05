@@ -17,3 +17,9 @@ pwd=1qaz2wsx3edc
 [workFlow wiki](https://github.com/zuston/MIP-Searching/wiki/WorkFlow-DataFormat-Design)  
 
 [workFlow file](https://github.com/zuston/MIP-Searching/blob/master/src/main/java/workflow/workflow.json)
+
+###  searching formual
+* **_1A&(H|2A)_**
+* K&S&(sg=216)&(es=1:1:1*)&(ve=8|12)&1A&(en=3|8)^
+* ^ 为只包含的 tag, * 为 ratio 中比例全排列的 tag
+* 同时在子查询中支持 **_sg=10-20_** or **_sg>=10_** or **_sg<30_** or **_sg=10|30_** 符号查询
