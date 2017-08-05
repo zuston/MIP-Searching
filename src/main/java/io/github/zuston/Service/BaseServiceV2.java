@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import io.github.zuston.Helper.ZipHelper;
 import io.github.zuston.Listener.DbInitListener;
+import io.github.zuston.MipCore.CoreConditionGenerator;
 import io.github.zuston.Util.*;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -515,5 +516,15 @@ public class BaseServiceV2 {
             result.put(name+"-"+objectid,valuePoscar.getBytes());
         }
         return result;
+    }
+
+
+    /**
+     * 预留接口，全部下载excel 和 poscar
+     * @param res
+     * @param expression
+     * @param flag
+     */
+    public static void basicPoscarAndExcelDownload(HttpServletResponse res, String expression, int flag) {
     }
 }

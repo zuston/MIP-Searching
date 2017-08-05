@@ -73,6 +73,11 @@ public class MainController {
         BaseServiceV2.basicPoscarDownloadFunction(res,expression,flag);
     }
 
+    @RequestMapping(value = "/m/poscarAndExcelDownload", method = RequestMethod.GET)
+    public void poscarAndExcelDownload(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
+        BaseServiceV2.basicPoscarAndExcelDownload(res,expression,flag);
+    }
+
     @RequestMapping(value = "/m/testjsmol",method = RequestMethod.GET,produces = MediaType.TEXT_PLAIN_VALUE)
     public String tjsmol(){
         BufferedReader br = null;

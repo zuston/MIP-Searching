@@ -7,6 +7,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
+import io.github.zuston.MipCore.CoreConditionGenerator;
+import io.github.zuston.MipCore.CoreExpressionDecoder;
 import io.github.zuston.Util.*;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -19,7 +21,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
-import static io.github.zuston.Util.AnalyExpression.indexArr;
+import static io.github.zuston.MipCore.CoreExpressionDecoder.indexArr;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 /**
@@ -144,7 +146,7 @@ public class BaseService {
         }
 
 
-        ArrayList<String> expressionAnalyArr = AnalyExpression.simpleAnaly(expression);
+        ArrayList<String> expressionAnalyArr = CoreExpressionDecoder.simpleAnaly(expression);
         if (expressionAnalyArr!=null&&expressionAnalyArr.size()>1){
             BasicDBObject base = new BasicDBObject();
             BasicDBList co = new BasicDBList();
@@ -630,4 +632,5 @@ public class BaseService {
         }
         return str1;
     }
+
 }

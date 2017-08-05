@@ -1,5 +1,6 @@
-package io.github.zuston.Util;
+package io.github.zuston.MipCore;
 
+import io.github.zuston.Util.RaceMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,8 +12,10 @@ import java.util.Stack;
 /**
  * Created by zuston on 17-3-28.
  */
-public class AnalyExpression {
-    public final static Logger logger = LoggerFactory.getLogger(AnalyExpression.class);
+public class CoreExpressionDecoder {
+    public final static Logger logger = LoggerFactory.getLogger(CoreExpressionDecoder.class);
+
+    // 解析检索表达式核心算法
     public static ArrayList<String> simpleAnaly(String str){
         Stack<Character> stack = new Stack<Character>();
         char [] strChar = str.toCharArray();

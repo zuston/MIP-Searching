@@ -3,7 +3,7 @@ package Test;
 import java.util.ArrayList;
 import java.util.Stack;
 
-import static io.github.zuston.Util.AnalyExpression.indexArr;
+import static io.github.zuston.MipCore.CoreExpressionDecoder.indexArr;
 
 /**
  * Created by zuston on 17/3/27.
