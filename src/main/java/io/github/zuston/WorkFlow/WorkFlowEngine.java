@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import io.github.zuston.WorkFlow.WfBean.ActionNode;
 import io.github.zuston.WorkFlow.WfBean.EdgeNode;
 import io.github.zuston.WorkFlow.WfBean.QuestionNode;
+import io.github.zuston.WorkFlow.WfBean.WorkFlowBean;
 import io.github.zuston.WorkFlow.WfSupport.EdgeConst;
 
 import java.lang.reflect.Type;
@@ -47,31 +48,62 @@ public class WorkFlowEngine {
         questionHm =
                 questionNodes.stream().collect(Collectors.toMap(QuestionNode::getId,c->c));
 
-        int [] flowContainer = new int[1000];
+        // 将　json　解析为链表
+        ArrayList<WorkFlowBean> beansLinkedList = new ArrayList<>();
         for (EdgeNode edgeNode : edgeNodes){
-            flowContainer[edgeNode.sourceID] = edgeNode.targetID;
+
+            if (edgeNode.type == EdgeConst.QUESTION_ACTION){
+                WorkFlowBean existBean = haveExistedBean(beansLinkedList,edgeNode.sourceID);
+                if (edgeNode.conditionRes){
+                    existBean.nextTrueTargetID = edgeNode.targetID;
+                }else {
+                    existBean.nextFalseTargetID = edgeNode.targetID;
+                }
+                continue;
+            }
+
+            WorkFlowBean workFlowBean = new WorkFlowBean();
+            workFlowBean.sourceID = edgeNode.sourceID;
+            workFlowBean.nextTrueTargetID = edgeNode.targetID;
+            beansLinkedList.add(workFlowBean);
         }
-        core(flowContainer,1);
+        core(beansLinkedList);
     }
 
-    private void core(int[] flowContainer, int start) {
-        if (flowContainer[start]==0)    return;
-        int nextId = flowContainer[start];
-        int currentID = start;
+    //　流模型解析，映射到　script　生成
+    private void core(ArrayList<WorkFlowBean> beansLinkedList) {
 
-        // 不采用 edge type　字段的条件
-        int nextTag = actionHm.containsKey(nextId) && !questionHm.containsKey(nextId) ? 1:0;
-        int currentTag = actionHm.containsKey(currentID) && !questionHm.containsKey(currentID) ? 1:0;
-        int edgeType = 0;
-        if (nextTag == 1 && currentTag ==1) edgeType = EdgeConst.ACTION_ACTION;
-        if (nextTag == 1 && currentTag ==0) edgeType = EdgeConst.QUESTION_ACTION;
-        if (nextTag == 0 && currentTag ==1) edgeType = EdgeConst.ACTION_QUESTION;
-
-        if (edgeType == EdgeConst.QUESTION_ACTION){
-
-        }
     }
 
+    private WorkFlowBean haveExistedBean(ArrayList<WorkFlowBean> beansLinkedList, int sourceID) {
+        for (WorkFlowBean bean : beansLinkedList){
+            if (bean.sourceID == sourceID)  return bean;
+        }
+        return new WorkFlowBean();
+    }
+
+//    private void core(int[] flowContainer, int start) {
+//        if (flowContainer[start]==0)    return;
+//        int nextId = flowContainer[start];
+//        int currentID = start;
+//
+//        // 不采用 edge type　字段的条件
+//        int nextTag = actionHm.containsKey(nextId) && !questionHm.containsKey(nextId) ? 1:0;
+//        int currentTag = actionHm.containsKey(currentID) && !questionHm.containsKey(currentID) ? 1:0;
+//        int edgeType = 0;
+//        if (nextTag == 1 && currentTag ==1) edgeType = EdgeConst.ACTION_ACTION;
+//        if (nextTag == 1 && currentTag ==0) edgeType = EdgeConst.QUESTION_ACTION;
+//        if (nextTag == 0 && currentTag ==1) edgeType = EdgeConst.ACTION_QUESTION;
+//
+//        if (edgeType == EdgeConst.QUESTION_ACTION){
+//
+//        }
+//    }
+
+    /**
+     * json解析
+     * @param workFlowJson
+     */
     private void parse(String workFlowJson) {
         Gson gson = new Gson();
 
