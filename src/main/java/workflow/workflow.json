@@ -1,92 +1,35 @@
 {
-  "nodes" : [
+  "ActionNode" : [
     {
       "id" : 1,
       "name" : "kpoint",
-      "type" : "action",
-      "metaData" : {
-        "outputPath" : "/opt/kpoint",
-        "loopCount" : 2
-      }
-    },
-    {
-      "id" : 2,
-      "name" : "loop",
-      "type" : "question",
-      "metaData" : [
-        {
-          "conditionId" : 1,
-          "conditionType" : "convergent",
-          "condition" : null,
-          "conditionValue" : null,
-          "conditionLabel" : "是否收敛"
-        },
-        {
-          "conditionId" : 2,
-          "conditionType" : "loop",
-          "condition" : "count<?",
-          "conditionValue" : 4,
-          "conditionLabel" : "触发重算次数限制"
-        }
-      ]
-    },
-    {
-      "id" : 3,
-      "name" : "relax",
-      "type" : "action",
-      "metaData" : {
-        "outputPath" : "/opt/relax"
-      }
-    },
-    {
-      "id" : 4,
-      "name" : "band",
-      "type" : "action",
-      "metaData" : {
-        "outputPath" : "/opt/band"
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/kpoint",
+        "inputDataSource" : ["/opt/kpoint","/opt/popo"],
+        "inputParam" : 2
       }
     }
   ],
 
+  "QuestionNode" : [
+    {
+      "id" : 2,
+      "name" : "loop",
+      "QuestionMetaData" : {
+        "conditionId" : 4,
+        "conditionType" : 2,
+        "condition" : ">",
+        "conditionValue" : "10",
+        "conditionScript" : "null",
+        "conditionLabel" : "loop　判断"
+      }
+    }
+  ],
   "edges" : [
     {
-      "source" : 1,
-      "target" : 2,
-      "type" : "action"
-    },
-    {
-      "source" : 2,
-      "target" : 3,
-      "type" : "question",
-      "metaData" : {
-        "judge" : [
-          {
-            "conditionId" : 1,
-            "conditionRes" : true
-          },
-          {
-            "conditionId" : 2,
-            "conditionRes" : true
-          }
-        ]
-      }
-    },
-    {
-      "source" : 2,
-      "target" : 4,
-      "type" : "question",
-      "metaData" : {
-        "!judge" : [
-          {
-            "conditionId" : 1,
-            "conditionRes" : true
-          },
-          {
-            "conditionId" : 2,
-            "conditionRes" : true
-          }
-        ]
-      }
+      "sourceID" : 1,
+      "targetID" : 2,
+      "type" : 2
     }
   ]
 }
