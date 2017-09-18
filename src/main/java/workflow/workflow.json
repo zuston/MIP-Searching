@@ -6,14 +6,41 @@
       "ActionMetaData" : {
         "outputDataSource" : "/opt/kpoint",
         "inputDataSource" : ["/opt/kpoint","/opt/popo"],
-        "inputParam" : 2
+        "inputParam" : 10
+      }
+    },
+    {
+      "id" : 2,
+      "name" : "poscar",
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/poscar",
+        "inputDataSource" : ["/opt/poscar","/opt/popo"],
+        "inputParam" : 20
+      }
+    },
+    {
+      "id" : 4,
+      "name" : "potcar",
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/potcar",
+        "inputDataSource" : ["/opt/potcar","/opt/popo"],
+        "inputParam" : 40
+      }
+    },
+    {
+      "id" : 5,
+      "name" : "relax",
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/relax",
+        "inputDataSource" : ["/opt/relax","/opt/popo"],
+        "inputParam" : 50
       }
     }
   ],
 
   "QuestionNode" : [
     {
-      "id" : 2,
+      "id" : 3,
       "name" : "loop",
       "QuestionMetaData" : {
         "conditionId" : 4,
@@ -29,7 +56,29 @@
     {
       "sourceID" : 1,
       "targetID" : 2,
+      "type" : 1
+    },
+    {
+      "sourceID" : 2,
+      "targetID" : 3,
       "type" : 2
+    },
+    {
+      "sourceID" : 3,
+      "targetID" : 2,
+      "type" : 3,
+      "conditionRes" : false
+    },
+    {
+      "sourceID" : 3,
+      "targetID" : 4,
+      "type" : 3,
+      "conditionRes" : true
+    },
+    {
+      "sourceID" : 4,
+      "targetID" : 5,
+      "type" : 1
     }
   ]
 }
