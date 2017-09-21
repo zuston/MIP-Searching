@@ -11,7 +11,7 @@ import java.io.IOException;
  */
 public class JsonTest {
     public static void main(String[] args) throws Exception {
-        String path = "/home/zuston/dev/MIP-Searching/src/main/java/workflow/workflow.json";
+        String path = "/home/zuston/dev/MIP-Searching/src/main/java/workflow/workflow1.json";
         String json = readString(path);
         WorkFlowEngine workFlowEngine = new WorkFlowEngine();
         workFlowEngine.run(json);
