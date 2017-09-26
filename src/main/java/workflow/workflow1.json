@@ -35,20 +35,38 @@
         "inputDataSource" : ["/opt/relax","/opt/popo"],
         "inputParam" : 50
       }
+    },
+    {
+      "id" : 6,
+      "name" : "relax",
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/relax",
+        "inputDataSource" : ["/opt/relax","/opt/popo"],
+        "inputParam" : 50
+      }
+    },
+    {
+      "id" : 7,
+      "name" : "relax",
+      "ActionMetaData" : {
+        "outputDataSource" : "/opt/relax",
+        "inputDataSource" : ["/opt/relax","/opt/popo"],
+        "inputParam" : 50
+      }
     }
   ],
 
   "QuestionNode" : [
     {
       "id" : 3,
-      "name" : "loop",
+      "name" : "if",
       "QuestionMetaData" : {
         "conditionId" : 4,
         "conditionType" : 2,
         "condition" : ">",
         "conditionValue" : "10",
         "conditionScript" : "null",
-        "conditionLabel" : "loop　判断"
+        "conditionLabel" : "if　判断"
       }
     }
   ],
@@ -65,20 +83,30 @@
     },
     {
       "sourceID" : 3,
-      "targetID" : 2,
+      "targetID" : 5,
       "type" : 3,
       "conditionRes" : false
+    },
+    {
+      "sourceID" : 5,
+      "targetID" : 6,
+      "type" : 2
+    },
+    {
+      "sourceID" : 4,
+      "targetID" : 7,
+      "type" : 2
+    },
+    {
+      "sourceID" : 6,
+      "targetID" : 7,
+      "type" : 2
     },
     {
       "sourceID" : 3,
       "targetID" : 4,
       "type" : 3,
       "conditionRes" : true
-    },
-    {
-      "sourceID" : 4,
-      "targetID" : 5,
-      "type" : 1
     }
   ]
 }

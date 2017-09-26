@@ -6,5 +6,6 @@ package io.github.zuston.WorkFlow.WfSupport;
 public class EdgeConst {
     public static final int ACTION_ACTION = 1;
     public static final int ACTION_QUESTION = 2;
+    //　多分支
     public static final int QUESTION_ACTION = 3;
 }
