@@ -1,11 +1,15 @@
 package io.github.zuston.Service;
 
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import io.github.zuston.Helper.ZipHelper;
 import io.github.zuston.Listener.DbInitListener;
 import io.github.zuston.MipCore.CoreConditionGenerator;
-import io.github.zuston.Util.*;
+import io.github.zuston.Util.ErrorMapper;
+import io.github.zuston.Util.ExcelGenerate;
+import io.github.zuston.Util.FileDownLoadUtil;
+import io.github.zuston.Util.RedisUtil;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -15,9 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.zip.ZipOutputStream;
 
@@ -184,11 +186,11 @@ public class BaseServiceV2 {
      */
     private static String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
 
-//        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
-//        if (!redisJson.equals("error")){
-//            System.out.println("命中json");
-//            return redisJson;
-//        }
+        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
+        if (!redisJson.equals("error")){
+            System.out.println("命中json");
+            return redisJson;
+        }
 
         long dataBaseCount = latestBasicCollection.count();
 
@@ -197,12 +199,12 @@ public class BaseServiceV2 {
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = 0;
-//        long redisCount = RedisUtil.getSearchCount(expression);
-        long redisCount = -1;
+        long redisCount = RedisUtil.getSearchCount(expression);
+//        long redisCount = -1;
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
-//            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
             logger.info("未命中缓存,统计耗时:{}",System.currentTimeMillis()-time);
         }else{
             logger.info("命中缓存");
@@ -287,7 +289,7 @@ public class BaseServiceV2 {
         dataSuffix.append(",\"allCount\":");
         dataSuffix.append(dataBaseCount);
         dataSuffix.append("}");
-//        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page),dataSuffix.toString());
+        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag),dataSuffix.toString());
         return dataSuffix.toString();
     }
 
@@ -519,6 +521,7 @@ public class BaseServiceV2 {
     }
 
 
+
     /**
      * 预留接口，全部下载excel 和 poscar
      * @param res
@@ -526,5 +529,61 @@ public class BaseServiceV2 {
      * @param flag
      */
     public static void basicPoscarAndExcelDownload(HttpServletResponse res, String expression, int flag) {
+    }
+
+    // TODO: 9/26/17 与上面方面重复度太高，待改进，写的太丑
+    public static void choosedPoscarDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException {
+        logger.info(mids);
+        String zipName = "choosedPoscarResults.zip";
+        res.setContentType("APPLICATION/OCTET-STREAM");
+        res.setHeader("Content-Disposition","attachment; filename="+zipName);
+        ZipOutputStream out = new ZipOutputStream(res.getOutputStream());
+        try {
+            LinkedHashMap<String,byte[]> hm = getPoscarFromMids(mids,flag);
+            ArrayList<byte[]> poscarList = new ArrayList<byte[]>();
+            ArrayList<String> nameList = new ArrayList<String>();
+            for (Map.Entry<String,byte[]> mm:hm.entrySet()){
+                poscarList.add(mm.getValue());
+                nameList.add(mm.getKey());
+            }
+            ZipHelper.doCompress(poscarList,nameList,out);
+            res.flushBuffer();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally{
+            out.close();
+        }
+    }
+
+    private static LinkedHashMap<String,byte[]> getPoscarFromMids(String mids, int flag) {
+        List<String> midList = Arrays.asList(mids.split("&"));
+        BasicDBObject base = new BasicDBObject();
+        BasicDBList list = new BasicDBList();
+        for (String mid : midList){
+            list.add(new BasicDBObject("original_id",mid));
+        }
+        base.put("$or",list);
+        logger.info(base.toString());
+        ArrayList<byte[]> res = new ArrayList<byte[]>();
+        LinkedHashMap<String,byte[]> result = new LinkedHashMap<String, byte[]>();
+        for (Document document:latestBasicCollection.find(base)){
+            String valuePoscar = (String) document.get("poscar");
+            String name = (String) document.get("simplified_name");
+            String objectid = (String) document.get("_id").toString();
+            result.put(name+"-"+objectid,valuePoscar.getBytes());
+        }
+        return result;
+    }
+
+    public static void choosedExcelDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException, NoSuchAlgorithmException {
+        List<String> midList =Arrays.asList(mids.split("&"));
+        BasicDBObject base = new BasicDBObject();
+        BasicDBList list = new BasicDBList();
+        for (String mid : midList){
+            list.add(new BasicDBObject("original_id",mid));
+        }
+        base.put("$or",list);
+        byte[] valueByte = excelGenerate(base);
+        FileDownLoadUtil.generateDownloadResponseByBytes(valueByte,res,"choosedExcelResults.xls");
     }
 }

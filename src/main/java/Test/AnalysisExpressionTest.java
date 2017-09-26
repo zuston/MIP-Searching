@@ -1,22 +1,20 @@
 package Test;
 
+import io.github.zuston.MipCore.CoreConditionGenerator;
+
 import java.util.ArrayList;
 import java.util.Stack;
-
-import static io.github.zuston.MipCore.CoreExpressionDecoder.indexArr;
 
 /**
  * Created by zuston on 17/3/27.
  */
 public class AnalysisExpressionTest {
     public static void main(String[] args) {
-        String testStr1 = "Si";
-//        System.out.println(BaseServiceV2.basicInfoFunction(testStr1,1,1));
-//        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1,0));
-        System.out.println(indexArr("1A",'&'));
-//        System.out.println();
-//        BaseService.getInfo(testStr1,1,1);
+        String testStr1 = "{Si,S,H}";
+//        System.out.println(CoreExpressionDecoder.complexAnaly(testStr1));
+        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1,0));
     }
+
 
 
     public static boolean isTag(char c){

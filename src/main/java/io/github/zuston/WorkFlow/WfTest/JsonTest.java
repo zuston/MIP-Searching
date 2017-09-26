@@ -10,6 +10,7 @@ import java.io.IOException;
  * Created by zuston on 17-9-13.
  */
 public class JsonTest {
+
     public static void main(String[] args) throws Exception {
         String path = "/home/zuston/dev/MIP-Searching/src/main/java/workflow/workflow.json";
         String json = readString(path);

@@ -23,12 +23,24 @@ import static io.github.zuston.MipCore.CoreExpressionDecoder.indexArr;
 public class CoreConditionGenerator {
     public final static Logger LOGGER = LoggerFactory.getLogger(CoreConditionGenerator.class);
     public static BasicDBObject coreContionGenertor(String formula,int flag){
+
         // ^ 符号代表 是否按照 只包含 还是 包含 的条件来搜索
         // 此处是上行的条件 tag
         int inFlag = formula.indexOf("^")>=0?1:0;
         formula = formula.replace("^","");
-        // 解析表达式核心算法
-        ArrayList<String> formualList = CoreExpressionDecoder.simpleAnaly(formula);
+
+        List<String> formualList = new ArrayList<>();
+
+        // 针对 {Si,S,Se} 这种全组合的情况表达式解析
+        // 生成全组合的例子
+        if (formula.contains("{")&&formula.contains("}")&&formula.indexOf("{")==0&&formula.indexOf("}")==formula.length()-1){
+            String tempFormula = generatorAllComponent(formula);
+            formualList = CoreExpressionDecoder.complexAnaly(tempFormula);
+            inFlag = 1;
+        }else{
+            formualList = CoreExpressionDecoder.simpleAnaly(formula);
+        }
+
         LOGGER.info("解析之后的表达式列表:{}",formualList);
         BasicDBObject base = new BasicDBObject();
         if (formualList.size()>1){
@@ -41,6 +53,30 @@ public class CoreConditionGenerator {
             base = simpleConditionGenertor(formualList.get(0),flag,inFlag);
         }
         return base;
+    }
+
+    private static String generatorAllComponent(String formula) {
+        String strFormula = formula.substring(1,formula.length()).substring(0,formula.length()-2);
+        String [] splitString = strFormula.split(",");
+        List<String> componentArr = new ArrayList<>();
+        List<String> tempArr = new ArrayList<>();
+        allComponentFunction(splitString,tempArr,0,componentArr);
+
+        return String.join("|",componentArr);
+    }
+
+    private static void allComponentFunction(String[] splitString, List<String> tempArr, int count, List<String> componentArr) {
+        if (count == splitString.length){
+            if (tempArr.size()!=0){
+                componentArr.add("("+String.join("&", tempArr)+")");
+            }
+            return;
+        }
+
+        allComponentFunction(splitString,tempArr,count+1,componentArr);
+        tempArr.add(splitString[count]);
+        allComponentFunction(splitString,tempArr,count+1,componentArr);
+        tempArr.remove(tempArr.size()-1);
     }
 
     /**
@@ -200,13 +236,15 @@ public class CoreConditionGenerator {
                 // 此为 atomic_numbers_ratio 元素比例的情况 es=1:1 etc
                 // 此处按需求增加 es=1:2 转化为 es=1:2 or es=2:1 的检索情况, 标记为 *
                 boolean ratioAllTag = value.contains("*");
-                if (!ratioAllTag)
-                {
-                    condition.put(KeyMapper.mapper.get(key),value);
-                    return;
-                }
-                // 去除 tag
-                value = value.substring(0,value.length()-1);
+                // 直接将需求改为比例全排列
+//                if (!ratioAllTag)
+//                {
+//                    condition.put(KeyMapper.mapper.get(key),value);
+//                    return;
+//                }
+                // 如果包含 * 则去除 tag ，兼容上一版
+                if (ratioAllTag)
+                    value = value.substring(0,value.length()-1);
                 BasicDBList esConditionTempList = new BasicDBList();
                 List<String> ratioAllChangeList = new ArrayList<>(new HashSet<>(generateRatioAll(value)));
                 for (String ratioValue : ratioAllChangeList)
@@ -300,15 +338,5 @@ public class CoreConditionGenerator {
         String startV = list.get(start);
         list.set(start,list.get(changeIndex));
         list.set(changeIndex,startV);
-    }
-
-    public static void main(String[] args) {
-        List<String> reslist = new ArrayList<>();
-        List<String> needRatioAll = new ArrayList<String>(Arrays.asList("1","2","3"));
-        generateRatioLoop(reslist,needRatioAll,0);
-        reslist.stream().forEach(System.out::println);
-
-        String v = "1:2:3:9*";
-        System.out.println(v.substring(0,v.length()-1));
     }
 }

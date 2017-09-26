@@ -73,38 +73,20 @@ public class MainController {
         BaseServiceV2.basicPoscarDownloadFunction(res,expression,flag);
     }
 
+    @RequestMapping(value = "/m/choosedPoscarDownload", method = RequestMethod.GET)
+    public void choosedPoscarDownload(HttpServletResponse res,@RequestParam("mids")String mids,@RequestParam("computed")int flag) throws IOException {
+        BaseServiceV2.choosedPoscarDownloadFunction(res,mids,flag);
+    }
+
+    @RequestMapping(value = "/m/choosedExcelDownload", method = RequestMethod.GET)
+    public void choosedExcelDownload(HttpServletResponse res,@RequestParam("mids")String mids,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
+        BaseServiceV2.choosedExcelDownloadFunction(res,mids,flag);
+    }
+
     @RequestMapping(value = "/m/poscarAndExcelDownload", method = RequestMethod.GET)
     public void poscarAndExcelDownload(HttpServletResponse res,@RequestParam("expression")String expression,@RequestParam("computed")int flag) throws IOException, NoSuchAlgorithmException {
         BaseServiceV2.basicPoscarAndExcelDownload(res,expression,flag);
     }
-
-    @RequestMapping(value = "/m/testjsmol",method = RequestMethod.GET,produces = MediaType.TEXT_PLAIN_VALUE)
-    public String tjsmol(){
-        BufferedReader br = null;
-        StringBuffer sb = null;
-        try {
-            br = new BufferedReader(new InputStreamReader(new FileInputStream("/Users/zuston/Downloads/F7.bxsf"))); //这里可以控制编码
-            sb = new StringBuffer();
-            String line = null;
-            while((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                br.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        String data = new String(sb); //StringBuffer ==> String
-        return data;
-    }
-
-
-
 
     /**
      * V1 版本废弃

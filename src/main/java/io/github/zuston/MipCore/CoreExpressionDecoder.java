@@ -4,10 +4,7 @@ import io.github.zuston.Util.RaceMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * Created by zuston on 17-3-28.
@@ -15,7 +12,59 @@ import java.util.Stack;
 public class CoreExpressionDecoder {
     public final static Logger logger = LoggerFactory.getLogger(CoreExpressionDecoder.class);
 
+    // TODO: 9/26/17
+    // 针对 (Si&S)|(H&He)|(G&Y) 这种情况
+    public static List<String> complexAnaly(String str){
+        boolean tag = false;
+        if (!str.contains("|")) return simpleAnaly(str);
+        List<Integer> indexList = new ArrayList<>();
+        int c = 0;
+        // 查找 | 的位置,
+        for (char value : str.toCharArray()){
+            if (value=='|'){
+                indexList.add(c);
+            }
+            c++;
+        }
+        char [] strArr = str.toCharArray();
+        int tagValue = 0;
+        for (Integer value : indexList){
+            if (value-1>=0 && value+1<=str.length()-1){
+                if (strArr[value-1]==')'&&strArr[value+1]=='('){
+                    tagValue ++;
+                }
+            }
+        }
+        if (tagValue == indexList.size())
+            tag = true;
+
+        if (!tag)   return simpleAnaly(str);
+
+        // 复杂表达式时候的解析
+        List<String> analyArr = new ArrayList<>();
+        for (int i=0;i<=indexList.size();i++){
+            int start = 0;
+            int end = 0;
+            if (i==0){
+                start = 0;
+                end = indexList.get(i);
+            }
+            else if (i==indexList.size()){
+                start = indexList.get(i-1)+1;
+                end = str.length();
+            }
+            else {
+                start = indexList.get(i-1)+1;
+                end = indexList.get(i);
+            }
+            String tempStr = str.substring(start,end);
+            analyArr.addAll(simpleAnaly(tempStr));
+        }
+        return analyArr;
+    }
+
     // 解析检索表达式核心算法
+    // 暂时不支持 | 的多表达式解析
     public static ArrayList<String> simpleAnaly(String str){
         Stack<Character> stack = new Stack<Character>();
         char [] strChar = str.toCharArray();
