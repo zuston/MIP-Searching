@@ -1,4 +1,4 @@
-package io.github.zuston.Util;
+package io.github.zuston.Helper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +11,8 @@ import java.util.Properties;
 /**
  * Created by zuston on 17/5/10.
  */
-public class PropertyUtil {
-    public final static Logger LOGGER = LoggerFactory.getLogger(PropertyUtil.class);
+public class PropertyHelper {
+    public final static Logger LOGGER = LoggerFactory.getLogger(PropertyHelper.class);
     public static Properties loadProperty(String filename) {
         String outPath = "/opt/";
         Properties prop = new Properties();

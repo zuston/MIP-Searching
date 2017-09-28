@@ -6,7 +6,7 @@ import java.io.*;
 /**
  * Created by zuston on 17/5/3.
  */
-public class FileDownLoadUtil {
+public class FileUtil {
     public static void generateDownloadResponseByFile(String fileName, HttpServletResponse res,String path){
         res.setHeader("content-type", "application/octet-stream");
         res.setContentType("application/octet-stream");

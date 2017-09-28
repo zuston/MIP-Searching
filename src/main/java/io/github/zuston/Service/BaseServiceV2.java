@@ -6,14 +6,17 @@ import com.mongodb.client.MongoCollection;
 import io.github.zuston.Helper.ZipHelper;
 import io.github.zuston.Listener.DbInitListener;
 import io.github.zuston.MipCore.CoreConditionGenerator;
-import io.github.zuston.Util.ErrorMapper;
-import io.github.zuston.Util.ExcelGenerate;
-import io.github.zuston.Util.FileDownLoadUtil;
-import io.github.zuston.Util.RedisUtil;
+import io.github.zuston.Tools.Notify.Impl.WechatNotifyTool;
+import io.github.zuston.Util.Mapper.ErrorMapper;
+import io.github.zuston.Util.ExcelUtil;
+import io.github.zuston.Util.FileUtil;
+import io.github.zuston.Helper.RedisHelper;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -27,6 +30,7 @@ import java.util.zip.ZipOutputStream;
 /**
  * Created by zuston on 17/5/2.
  */
+@Service
 public class BaseServiceV2 {
 
     public final static org.slf4j.Logger logger = LoggerFactory.getLogger(BaseServiceV2.class);
@@ -36,32 +40,36 @@ public class BaseServiceV2 {
     public static MongoCollection<Document> caculateMetaCollection = DbInitListener.caculateMetaCollection;
     public static MongoCollection<Document> smallFileCollection = DbInitListener.smallFileCollection;
 
-    public static String basicInfoFunction(String expression, int page,int flag) {
+    @Autowired
+    private WechatNotifyTool wechatNotifyTool;
+
+    public String basicSearch(String expression, int page,int flag) {
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         logger.info("===================");
+        wechatNotifyTool.send(new HashMap<>());
         return basicInfoAppendFunction(basicDBObject,page,expression,flag);
     }
 
-    public static String basicGetAllCalculate(String expression,int flag){
+    public String basicGetAllCalculate(String expression,int flag){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         logger.info("===================");
         return basicAllCalculateFunction(basicDBObject,expression,flag);
     }
 
-    public static String basicGetRandomCalculate(String expression,int flag){
+    public String basicGetRandomCalculate(String expression,int flag){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         logger.info("===================");
         return basicRandomCalculateFunction(basicDBObject,expression,flag);
     }
 
-    private static String basicRandomCalculateFunction(BasicDBObject base, String expression, int tag) {
+    private String basicRandomCalculateFunction(BasicDBObject base, String expression, int tag) {
 
         boolean randomFlag = true;
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
         long totalCount = 0;
-        long redisCount = RedisUtil.getSearchCount(expression);
+        long redisCount = RedisHelper.getInt(expression);
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
@@ -70,7 +78,7 @@ public class BaseServiceV2 {
 
             logger.info("未命中缓存，统计耗时:{}",System.currentTimeMillis()-time);
 
-            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+            RedisHelper.set(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
         }else{
             logger.info("命中缓存");
             totalCount = redisCount;
@@ -125,20 +133,20 @@ public class BaseServiceV2 {
         return dataSuffix.toString();
     }
 
-    private static String basicAllCalculateFunction(BasicDBObject base, String expression, int tag) {
+    private String basicAllCalculateFunction(BasicDBObject base, String expression, int tag) {
 
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
         long totalCount = 0;
-        long redisCount = RedisUtil.getSearchCount(expression);
+        long redisCount = RedisHelper.getInt(expression);
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
 
             logger.info("未命中缓存，统计耗时:{}",System.currentTimeMillis()-time);
 
-            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+            RedisHelper.set(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
         }else{
             logger.info("命中缓存");
             totalCount = redisCount;
@@ -184,27 +192,32 @@ public class BaseServiceV2 {
      * @param page
      * @return
      */
-    private static String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
+    private String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
 
-        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
-        if (!redisJson.equals("error")){
-            System.out.println("命中json");
-            return redisJson;
+//        String redisJson = RedisHelper.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
+//        if (!redisJson.equals("error")){
+//            logger.info("命中json");
+//            return redisJson;
+//        }
+
+        int dataBaseCount = RedisHelper.getInt("allCount");
+        if (dataBaseCount==-1){
+            logger.info("未命中数目");
+            dataBaseCount = (int) latestBasicCollection.count();
+            RedisHelper.set("allCount",dataBaseCount+"");
         }
-
-        long dataBaseCount = latestBasicCollection.count();
 
         if (base==null){
             return ErrorMapper.ElementLackError();
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = 0;
-        long redisCount = RedisUtil.getSearchCount(expression);
+        long redisCount = RedisHelper.getInt(expression+"-"+String.valueOf(tag));
 //        long redisCount = -1;
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
-            RedisUtil.setSearchCount(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+            RedisHelper.set(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
             logger.info("未命中缓存,统计耗时:{}",System.currentTimeMillis()-time);
         }else{
             logger.info("命中缓存");
@@ -254,13 +267,19 @@ public class BaseServiceV2 {
                     }
 
                     if (extract!=null){
-                        bandGap = ",\"bandgap\":" +  ((Document)extract.get("extract_info")).get("band_gap") + "";
-                        extractJobIdStr += ",\"jobs\":[";
-                        for (String ooid:idList){
-                            extractJobIdStr += "\""+ooid+"\",";
+                        try {
+                            Document extractDoc = ((Document)extract.get("extract_info"));
+                            bandGap = ",\"bandgap\":" +  ((Document)extract.get("extract_info")).get("band_gap") + "";
+                            extractJobIdStr += ",\"jobs\":[";
+                            for (String ooid:idList){
+                                extractJobIdStr += "\""+ooid+"\",";
+                            }
+                            extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
+                            extractJobIdStr += "]";
+                        }catch (Exception e){
+                            logger.warn("original_id={}",id);
                         }
-                        extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
-                        extractJobIdStr += "]";
+
                     }
                 }
 
@@ -289,7 +308,7 @@ public class BaseServiceV2 {
         dataSuffix.append(",\"allCount\":");
         dataSuffix.append(dataBaseCount);
         dataSuffix.append("}");
-        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag),dataSuffix.toString());
+//        RedisHelper.setSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag),dataSuffix.toString());
         return dataSuffix.toString();
     }
 
@@ -301,14 +320,14 @@ public class BaseServiceV2 {
      * @throws IOException
      * @throws NoSuchAlgorithmException
      */
-    public static void basicExcelDownloadFunction(HttpServletResponse res,String expression,int flag) throws IOException, NoSuchAlgorithmException {
+    public void basicExcelDownloadFunction(HttpServletResponse res,String expression,int flag) throws IOException, NoSuchAlgorithmException {
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         byte[] valueByte = excelGenerate(basicDBObject);
-        FileDownLoadUtil.generateDownloadResponseByBytes(valueByte,res,"excelResults.xls");
+        FileUtil.generateDownloadResponseByBytes(valueByte,res,"excelResults.xls");
     }
 
 
-    private static byte[] excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
+    private byte[] excelGenerate(BasicDBObject base) throws IOException, NoSuchAlgorithmException {
         ArrayList<LinkedHashMap<String,String>> container = new ArrayList<LinkedHashMap<String, String>>();
         for (Document document:latestBasicCollection.find(base)){
             String id = (String) document.get("original_id");
@@ -324,7 +343,7 @@ public class BaseServiceV2 {
                 container.add(hm);
             }
         }
-        return ExcelGenerate.excelGenerateToByte(container);
+        return ExcelUtil.excelGenerateToByte(container);
     }
 
     public static String basicDetailInfoFunction(String id) {
@@ -367,7 +386,7 @@ public class BaseServiceV2 {
      * @param idd
      * @return
      */
-    public static String basicJsmolFunction(String idd){
+    public String basicJsmolFunction(String idd){
         Document document = extraColletion.find(new BasicDBObject("_id",new ObjectId(idd)).append("source_path","static.test_scan")).limit(1).first();
         if (document==null){
             return "error";
@@ -415,14 +434,14 @@ public class BaseServiceV2 {
      * @param idd
      * @return
      */
-    public static String basicJsmolFunctionFromMongoDb(String idd){
+    public String basicJsmolFunctionFromMongoDb(String idd){
         String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(idd))).limit(1).first().get("caculate_meta_id").toString();
         logger.info("渲染jsmol[caculateMetaId:{}]",caculateMetaId);
         logger.info("===================");
         return getStringFromMongo(caculateMetaId,"bposcar");
     }
 
-    private static String getStringFromMongo(String caculateMetaId,String columnName){
+    private String getStringFromMongo(String caculateMetaId,String columnName){
         Document document = caculateMetaCollection.find(new BasicDBObject("_id",new ObjectId(caculateMetaId))).limit(1).first();
         if (document==null){
             return "error";
@@ -448,10 +467,10 @@ public class BaseServiceV2 {
      * 新版直接从mongo中读取
      * poscar static relax 文件下载
      */
-    public static void basicFileDownloadFunction(HttpServletResponse res,String extractId,String columnName){
+    public void basicFileDownloadFunction(HttpServletResponse res,String extractId,String columnName){
         String caculateMetaId = (String) extraColletion.find(new BasicDBObject("_id",new ObjectId(extractId))).limit(1).first().get("caculate_meta_id").toString();
         String v = getStringFromMongo(caculateMetaId,columnName);
-        FileDownLoadUtil.generateDownloadResponseByString(v,res,columnName);
+        FileUtil.generateDownloadResponseByString(v,res,columnName);
     }
 
     /**
@@ -460,7 +479,7 @@ public class BaseServiceV2 {
      * @param jobid
      * @param type
      */
-    public static void basicImgLoad(HttpServletResponse response, String jobid, int type) throws IOException {
+    public void basicImgLoad(HttpServletResponse response, String jobid, int type) throws IOException {
         Document document = caculateMetaCollection.find(new BasicDBObject("jobid",Integer.valueOf(jobid))).limit(1).first();
         Document one = (Document) document.get("childs");
 
@@ -485,7 +504,7 @@ public class BaseServiceV2 {
      * @param expression
      * @param flag
      */
-    public static void basicPoscarDownloadFunction(HttpServletResponse response, String expression, int flag) throws IOException {
+    public void basicPoscarDownloadFunction(HttpServletResponse response, String expression, int flag) throws IOException {
         String zipName = "poscarResults.zip";
         response.setContentType("APPLICATION/OCTET-STREAM");
         response.setHeader("Content-Disposition","attachment; filename="+zipName);
@@ -507,7 +526,7 @@ public class BaseServiceV2 {
         }
     }
 
-    private static LinkedHashMap<String,byte[]> getPoscarFromExpression(String expression,int flag){
+    private LinkedHashMap<String,byte[]> getPoscarFromExpression(String expression,int flag){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         ArrayList<byte[]> res = new ArrayList<byte[]>();
         LinkedHashMap<String,byte[]> result = new LinkedHashMap<String, byte[]>();
@@ -528,11 +547,11 @@ public class BaseServiceV2 {
      * @param expression
      * @param flag
      */
-    public static void basicPoscarAndExcelDownload(HttpServletResponse res, String expression, int flag) {
+    public void basicPoscarAndExcelDownload(HttpServletResponse res, String expression, int flag) {
     }
 
     // TODO: 9/26/17 与上面方面重复度太高，待改进，写的太丑
-    public static void choosedPoscarDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException {
+    public void choosedPoscarDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException {
         logger.info(mids);
         String zipName = "choosedPoscarResults.zip";
         res.setContentType("APPLICATION/OCTET-STREAM");
@@ -555,7 +574,7 @@ public class BaseServiceV2 {
         }
     }
 
-    private static LinkedHashMap<String,byte[]> getPoscarFromMids(String mids, int flag) {
+    private LinkedHashMap<String,byte[]> getPoscarFromMids(String mids, int flag) {
         List<String> midList = Arrays.asList(mids.split("&"));
         BasicDBObject base = new BasicDBObject();
         BasicDBList list = new BasicDBList();
@@ -575,7 +594,7 @@ public class BaseServiceV2 {
         return result;
     }
 
-    public static void choosedExcelDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException, NoSuchAlgorithmException {
+    public void choosedExcelDownloadFunction(HttpServletResponse res, String mids, int flag) throws IOException, NoSuchAlgorithmException {
         List<String> midList =Arrays.asList(mids.split("&"));
         BasicDBObject base = new BasicDBObject();
         BasicDBList list = new BasicDBList();
@@ -584,6 +603,6 @@ public class BaseServiceV2 {
         }
         base.put("$or",list);
         byte[] valueByte = excelGenerate(base);
-        FileDownLoadUtil.generateDownloadResponseByBytes(valueByte,res,"choosedExcelResults.xls");
+        FileUtil.generateDownloadResponseByBytes(valueByte,res,"choosedExcelResults.xls");
     }
 }

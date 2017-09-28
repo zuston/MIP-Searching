@@ -1,4 +1,4 @@
-package io.github.zuston.Util;
+package io.github.zuston.Util.Mapper;
 
 import java.util.HashMap;
 

@@ -3,8 +3,8 @@ package io.github.zuston.MipCore;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.QueryOperators;
-import io.github.zuston.Util.KeyMapper;
-import io.github.zuston.Util.RaceMapper;
+import io.github.zuston.Util.Mapper.KeyMapper;
+import io.github.zuston.Util.Mapper.RaceMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

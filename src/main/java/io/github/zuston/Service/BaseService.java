@@ -7,9 +7,13 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import io.github.zuston.Bean.ConditionBean;
 import io.github.zuston.Bean.ConditionsBean;
+import io.github.zuston.Helper.DbHelper;
+import io.github.zuston.Helper.RedisHelper;
 import io.github.zuston.MipCore.CoreConditionGenerator;
 import io.github.zuston.MipCore.CoreExpressionDecoder;
 import io.github.zuston.Util.*;
+import io.github.zuston.Util.Mapper.ErrorMapper;
+import io.github.zuston.Util.Mapper.RaceMapper;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -29,7 +33,7 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
  */
 public class BaseService {
 
-    public static MongoDatabase mongoDataBase = MongoDb.getInstance();
+    public static MongoDatabase mongoDataBase = DbHelper.getInstance();
     public static MongoCollection<Document> mongoColletion = mongoDataBase.getCollection("vasp_input");
 
     public static MongoCollection<Document> duplicateColletion = mongoDataBase.getCollection("poscar_uniqueness_info");
@@ -314,7 +318,7 @@ public class BaseService {
      */
     private static String resAppend(BasicDBObject base,int page,String expression){
 
-        String redisJson = RedisUtil.getSearchJson(expression+"-"+String.valueOf(page));
+        String redisJson = RedisHelper.getString(expression+"-"+String.valueOf(page));
         System.out.println(expression+"-"+String.valueOf(page));
         if (!redisJson.equals("error")){
             System.out.println("命中json");
@@ -326,12 +330,12 @@ public class BaseService {
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = 0;
-        long redisCount = RedisUtil.getSearchCount(expression);
+        long redisCount = RedisHelper.getInt(expression);
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = mongoColletion.count(base);
             System.out.println("统计耗时:"+(System.currentTimeMillis()-time));
-            RedisUtil.setSearchCount(expression,String.valueOf(totalCount));
+            RedisHelper.set(expression,String.valueOf(totalCount));
         }else{
             System.out.println("命中缓存");
             totalCount = redisCount;
@@ -400,7 +404,7 @@ public class BaseService {
         dataSuffix.append(",\"count\":");
         dataSuffix.append(totalCount);
         dataSuffix.append("}");
-        RedisUtil.setSearchJson(expression+"-"+String.valueOf(page),dataSuffix.toString());
+        RedisHelper.set(expression+"-"+String.valueOf(page),dataSuffix.toString());
         return dataSuffix.toString();
     }
 
@@ -585,7 +589,7 @@ public class BaseService {
                 container.add(hm);
             }
         }
-        return ExcelGenerate.excelGenerateToFile(container);
+        return ExcelUtil.excelGenerateToFile(container);
     }
 
     public static String getJSmolInfo(String idd){

@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 /**
  * Created by zuston on 17/4/5.
  */
-public class RedisSession {
+public class SessionUtil {
     public static void setRedisSession(String value){
 
     }

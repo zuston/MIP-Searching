@@ -1,7 +1,7 @@
 package Test;
 
-import io.github.zuston.Util.RedisSession;
-import io.github.zuston.Util.RedisUtil;
+import io.github.zuston.Helper.RedisHelper;
+import io.github.zuston.Util.SessionUtil;
 
 import java.security.NoSuchAlgorithmException;
 
@@ -10,8 +10,8 @@ import java.security.NoSuchAlgorithmException;
  */
 public class redisTest {
     public static void main(String[] args) throws NoSuchAlgorithmException {
-        System.out.println(RedisUtil.getValue("hello"));
-        System.out.println(RedisSession.generateMd5("admin"));
-        System.out.println(RedisSession.generateMd5("admin"));
+        System.out.println(RedisHelper.getInt("hello"));
+        System.out.println(SessionUtil.generateMd5("admin"));
+        System.out.println(SessionUtil.generateMd5("admin"));
     }
 }

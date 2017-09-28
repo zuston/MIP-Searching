@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 /**
  * Created by zuston on 17/4/16.
  */
-public class ExcelGenerate {
+public class ExcelUtil {
     public static byte[] excelGenerateToByte(ArrayList<LinkedHashMap<String,String>> container) throws IOException, NoSuchAlgorithmException {
 
         Workbook workbook = new HSSFWorkbook();
@@ -84,7 +84,7 @@ public class ExcelGenerate {
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
 
-        String path = RedisSession.generateMd5(container.toString());
+        String path = SessionUtil.generateMd5(container.toString());
 //        FileOutputStream fout = new FileOutputStream("/usr/local/Cellar/openresty/1.11.2.2_2/nginx/html/static/"+ path+".xls");
 //        FileOutputStream fout = new FileOutputStream("/temp/"+ path+".xls");
 //        FileOutputStream fout = new FileOutputStream("/opt/openresty/nginx/html/static/"+ path+".xls");
@@ -160,7 +160,7 @@ public class ExcelGenerate {
 
         }
 
-        String path = RedisSession.generateMd5(container.toString());
+        String path = SessionUtil.generateMd5(container.toString());
 //        FileOutputStream fout = new FileOutputStream("/usr/local/Cellar/openresty/1.11.2.2_2/nginx/html/static/"+ path+".xls");
         FileOutputStream fout = new FileOutputStream("/temp/"+ path+".xls");
 //        FileOutputStream fout = new FileOutputStream("/opt/openresty/nginx/html/static/"+ path+".xls");

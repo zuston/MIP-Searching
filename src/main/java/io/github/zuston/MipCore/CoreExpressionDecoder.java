@@ -1,6 +1,6 @@
 package io.github.zuston.MipCore;
 
-import io.github.zuston.Util.RaceMapper;
+import io.github.zuston.Util.Mapper.RaceMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

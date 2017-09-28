@@ -2,7 +2,7 @@ package io.github.zuston.Listener;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import io.github.zuston.Util.MongoDb;
+import io.github.zuston.Helper.DbHelper;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class DbInitListener implements ApplicationListener<ApplicationStartedEve
     @Override
     public void onApplicationEvent(ApplicationStartedEvent applicationStartedEvent) {
         LOGGER.info("[init the db instance]");
-        mongoDataBase = MongoDb.getInstance();
+        mongoDataBase = DbHelper.getInstance();
         latestBasicCollection = mongoDataBase.getCollection("pfsas20170501");
         extraColletion = mongoDataBase.getCollection("extract");
         caculateMetaCollection = mongoDataBase.getCollection("caculate_meta");
