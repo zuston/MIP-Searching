@@ -3,7 +3,10 @@ package io.github.zuston.Helper;
 /**
  * Created by zuston on 17/5/20.
  */
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -21,6 +24,7 @@ public class ZipHelper {
             out.closeEntry();
         }
     }
+
 
     public static void doCompress(String srcFile, String zipFile) throws Exception {
         doCompress(new File(srcFile), new File(zipFile));

@@ -43,7 +43,7 @@ public class BaseServiceV2 {
     @Autowired
     private WechatNotifyTool wechatNotifyTool;
 
-    public String basicSearch(String expression, int page,int flag) {
+    public String basicSearch(String expression, int page,int flag){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         logger.info("===================");
         wechatNotifyTool.send(new HashMap<>());
@@ -279,7 +279,6 @@ public class BaseServiceV2 {
                         }catch (Exception e){
                             logger.warn("original_id={}",id);
                         }
-
                     }
                 }
 
