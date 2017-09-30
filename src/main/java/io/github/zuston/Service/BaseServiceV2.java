@@ -360,6 +360,22 @@ public class BaseServiceV2 {
             ObjectId calculateMetaId = (ObjectId)document.get("caculate_meta_id");
             Document calculateDoc = caculateMetaCollection.find(new BasicDBObject("_id",calculateMetaId)).limit(1).first();
             String jobId = String.valueOf(calculateDoc.get("jobid"));
+            // 添加页面是否显示
+            boolean isShowTransport = false;
+            try{
+                //childs.transport.childs.test_scan.childs.transported_txt
+                Document a = (Document) calculateDoc.get("childs");
+                Document b = (Document) a.get("transport");
+                Document c = (Document) b.get("childs");
+                Document d = (Document) c.get("test_scan");
+                Document e = (Document) d.get("childs");
+                Document f = (Document) e.get("transported_txt");
+                isShowTransport = true;
+            }catch (Exception e){
+                logger.warn("[method=detailInfoById,tag=isShowTransport,id={}]"+e.getMessage(),mid);
+            }
+
+//            isShowTransport = calculateDoc.containsKey("childs.transport.childs.test_scan.childs.transported_txt");
 
             String original_id = mid.split("-")[0]+"-"+mid.split("-")[1];
 
@@ -374,6 +390,7 @@ public class BaseServiceV2 {
                 jsonAppendString.append(",\"extract\":");
                 jsonAppendString.append(document.toJson());
                 jsonAppendString.append(",\"jobid\":"+jobId);
+                jsonAppendString.append(",\"isShowTransport\":"+isShowTransport);
             }
         }
         jsonAppendString.append("}");
