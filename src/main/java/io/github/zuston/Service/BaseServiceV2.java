@@ -212,12 +212,12 @@ public class BaseServiceV2 {
         }
         // TODO: 17/4/15 可以将优化结果存入redis中
         long totalCount = 0;
-        long redisCount = RedisHelper.getInt(expression+"-"+String.valueOf(tag));
-//        long redisCount = -1;
+//        long redisCount = RedisHelper.getInt(expression+"-"+String.valueOf(tag));
+        long redisCount = -1;
         if (redisCount==-1){
             long time = System.currentTimeMillis();
             totalCount = latestBasicCollection.count(base);
-            RedisHelper.set(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
+//            RedisHelper.set(expression+"-"+String.valueOf(tag),String.valueOf(totalCount));
             logger.info("未命中缓存,统计耗时:{}",System.currentTimeMillis()-time);
         }else{
             logger.info("命中缓存");

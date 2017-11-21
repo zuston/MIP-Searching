@@ -24,6 +24,9 @@ public class CoreConditionGenerator {
     public final static Logger LOGGER = LoggerFactory.getLogger(CoreConditionGenerator.class);
     public static BasicDBObject coreContionGenertor(String formula,int flag){
 
+        // 去除 搜索表达式 中所有的空格
+        formula = formula.replace(" ","");
+
         // ^ 符号代表 是否按照 只包含 还是 包含 的条件来搜索
         // 此处是上行的条件 tag
         int inFlag = formula.indexOf("^")>=0?1:0;

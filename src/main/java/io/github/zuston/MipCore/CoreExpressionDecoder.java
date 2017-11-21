@@ -94,6 +94,10 @@ public class CoreExpressionDecoder {
             sb.append(stack.pop());
         }
         sb = sb.reverse();
+        // 修复 (sg=216)&Mg&(es=1:1:1)&Ni 搜索出现问题的情况
+        if (sb.length() > 0 && sb.toString().toCharArray()[0]=='&'){
+            sb = new StringBuilder(sb.substring(1,sb.length()));
+        }
 
         logger.info("搜索表达式:{}",str);
         // arr 代表括号里面的元素
