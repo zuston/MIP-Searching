@@ -21,6 +21,8 @@ public class DbInitListener implements ApplicationListener<ApplicationStartedEve
     public static MongoCollection<Document> extraColletion = null;
     public static MongoCollection<Document> caculateMetaCollection = null;
     public static MongoCollection<Document> smallFileCollection = null;
+    // job info
+    public static MongoCollection<Document> jobInfoCollection = null;
 
     @Override
     public void onApplicationEvent(ApplicationStartedEvent applicationStartedEvent) {
@@ -30,5 +32,6 @@ public class DbInitListener implements ApplicationListener<ApplicationStartedEve
         extraColletion = mongoDataBase.getCollection("extract");
         caculateMetaCollection = mongoDataBase.getCollection("caculate_meta");
         smallFileCollection = mongoDataBase.getCollection("small_files");
+        jobInfoCollection = mongoDataBase.getCollection("job_info");
     }
 }

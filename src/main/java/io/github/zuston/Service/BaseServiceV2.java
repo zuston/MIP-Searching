@@ -3,6 +3,7 @@ package io.github.zuston.Service;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
+import io.github.zuston.Entity.JobInfoEntity;
 import io.github.zuston.Helper.ZipHelper;
 import io.github.zuston.Listener.DbInitListener;
 import io.github.zuston.MipCore.CoreConditionGenerator;
@@ -39,6 +40,7 @@ public class BaseServiceV2 {
     public static MongoCollection<Document> extraColletion = DbInitListener.extraColletion;
     public static MongoCollection<Document> caculateMetaCollection = DbInitListener.caculateMetaCollection;
     public static MongoCollection<Document> smallFileCollection = DbInitListener.smallFileCollection;
+    public static MongoCollection<Document> jobInfoCollection = DbInitListener.jobInfoCollection;
 
     @Autowired
     private WechatNotifyTool wechatNotifyTool;
@@ -254,7 +256,7 @@ public class BaseServiceV2 {
                 Document extract = null;
 
                 if (tag<2){
-                    ArrayList<String> idList = new ArrayList<String>();
+                    List<JobInfoEntity> jobInfoEntityList = new ArrayList<>();
                     Pattern pattern = Pattern.compile("^" + id + ".*$", Pattern.CASE_INSENSITIVE);
                     int count = 0;
                     for (Document document1:extraColletion.find(new BasicDBObject("m_id",new BasicDBObject("$regex",pattern)).append("source_path","scf.test_scan"))){
@@ -262,8 +264,28 @@ public class BaseServiceV2 {
                             // 只取第一个数的计算结果bandGap
                             extract = document1;
                         }
-                        idList.add(document1.get("_id").toString());
                         count++;
+
+                        String extractId = document1.get("_id").toString();
+                        // 获取 jobId 来查找 jobinfo 的具体信息
+                        ObjectId calculateMetaId = (ObjectId)document1.get("caculate_meta_id");
+                        Document calculateDoc = caculateMetaCollection.find(new BasicDBObject("_id",calculateMetaId)).limit(1).first();
+                        String jobId = String.valueOf(calculateDoc.get("jobid"));
+
+                        Document jobDoc = jobInfoCollection.find(new BasicDBObject("jobid",jobId)).limit(1).first();
+                        if (jobDoc!=null) {
+                            JobInfoEntity entity = new JobInfoEntity();
+                            entity.objectId = jobDoc.get("_id").toString();
+                            entity.calMethod = jobDoc.getString("calMethod");
+                            entity.calServer = jobDoc.getString("calServer");
+                            entity.create_time = jobDoc.getString("create_time");
+                            entity.finish_time = jobDoc.getString("finish_time");
+                            entity.owner = jobDoc.getString("owner");
+                            entity.jobid = jobDoc.getString("jobid");
+                            entity.extraid = extractId;
+                            jobInfoEntityList.add(entity);
+                        }
+
                     }
 
                     if (extract!=null){
@@ -271,8 +293,16 @@ public class BaseServiceV2 {
                             Document extractDoc = ((Document)extract.get("extract_info"));
                             bandGap = ",\"bandgap\":" +  ((Document)extract.get("extract_info")).get("band_gap") + "";
                             extractJobIdStr += ",\"jobs\":[";
-                            for (String ooid:idList){
-                                extractJobIdStr += "\""+ooid+"\",";
+                            for (JobInfoEntity entity : jobInfoEntityList) {
+                                extractJobIdStr += String.format( "{\"oid\":\"%s\",\"calMethod\":\"%s\",\"calServer\":\"%s\",\"create_time\":\"%s\",\"finish_time\":\"%s\",\"owner\":\"%s\",\"jobid\":\"%s\",\"extractid\":\"%s\"},",
+                                        entity.objectId,
+                                        entity.calMethod,
+                                        entity.calServer,
+                                        entity.create_time,
+                                        entity.finish_time,
+                                        entity.owner,
+                                        entity.jobid,
+                                        entity.extraid);
                             }
                             extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
                             extractJobIdStr += "]";
