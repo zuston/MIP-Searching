@@ -1,20 +1,25 @@
 package Test;
 
+import com.mongodb.BasicDBObject;
 import io.github.zuston.MipCore.CoreConditionGenerator;
 
 import java.util.ArrayList;
 import java.util.Stack;
+
 
 /**
  * Created by zuston on 17/3/27.
  */
 public class AnalysisExpressionTest {
     public static void main(String[] args) {
-        String testStr1 = "{Si,S,H}";
-//        System.out.println(CoreExpressionDecoder.complexAnaly(testStr1));
-        System.out.println(CoreConditionGenerator.coreContionGenertor(testStr1,0));
+       specialTagTest();
     }
 
+
+    public static void specialTagTest(){
+        String stString = "(st=SSeTe_Sublattice)";
+        BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(stString,0);
+    }
 
 
     public static boolean isTag(char c){

@@ -235,17 +235,16 @@ public class CoreConditionGenerator {
             // 等号且直接为值生成 condition ，例如 sg = 216 etc
             if (KeyMapper.DoubleList.contains(KeyMapper.mapper.get(key))){
                 condition.put(KeyMapper.mapper.get(key),Integer.valueOf(value));
+            }else if(KeyMapper.StringList.contains(KeyMapper.mapper.get(key))){
+                // TODO: 2017/12/2 special_tag 检索增加
+                String conditionKey = KeyMapper.mapper.get(key);
+                BasicDBObject conditionArrays = new BasicDBObject();
+                conditionArrays.append("$in",Arrays.asList(String.valueOf(value)));
+                condition.put(conditionKey,conditionArrays);
             }else{
                 // 此为 atomic_numbers_ratio 元素比例的情况 es=1:1 etc
                 // 此处按需求增加 es=1:2 转化为 es=1:2 or es=2:1 的检索情况, 标记为 *
                 boolean ratioAllTag = value.contains("*");
-                // 直接将需求改为比例全排列
-//                if (!ratioAllTag)
-//                {
-//                    condition.put(KeyMapper.mapper.get(key),value);
-//                    return;
-//                }
-                // 如果包含 * 则去除 tag ，兼容上一版
                 if (ratioAllTag)
                     value = value.substring(0,value.length()-1);
                 BasicDBList esConditionTempList = new BasicDBList();
