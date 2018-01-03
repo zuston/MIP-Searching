@@ -45,11 +45,11 @@ public class BaseServiceV2 {
     @Autowired
     private WechatNotifyTool wechatNotifyTool;
 
-    public String basicSearch(String expression, int page,int flag){
+    public String basicSearch(String expression, int page,int flag, String owner){
         BasicDBObject basicDBObject = CoreConditionGenerator.coreContionGenertor(expression,flag);
         logger.info("===================");
         wechatNotifyTool.send(new HashMap<>());
-        return basicInfoAppendFunction(basicDBObject,page,expression,flag);
+        return basicInfoAppendFunction(basicDBObject,page,expression,flag, owner);
     }
 
     public String basicGetAllCalculate(String expression,int flag){
@@ -192,9 +192,10 @@ public class BaseServiceV2 {
      * 根据condition，查找出结果拼接成 json string
      * @param base
      * @param page
+     * @param owner
      * @return
      */
-    private String basicInfoAppendFunction(BasicDBObject base,int page,String expression,int tag){
+    private String basicInfoAppendFunction(BasicDBObject base, int page, String expression, int tag, String owner){
 
 //        String redisJson = RedisHelper.getSearchJson(expression+"-"+String.valueOf(page)+"-"+String.valueOf(tag));
 //        if (!redisJson.equals("error")){
@@ -274,16 +275,18 @@ public class BaseServiceV2 {
 
                         Document jobDoc = jobInfoCollection.find(new BasicDBObject("jobid",jobId)).limit(1).first();
                         if (jobDoc!=null) {
-                            JobInfoEntity entity = new JobInfoEntity();
-                            entity.objectId = jobDoc.get("_id").toString();
-                            entity.calMethod = jobDoc.getString("calMethod");
-                            entity.calServer = jobDoc.getString("calServer");
-                            entity.create_time = jobDoc.getString("create_time");
-                            entity.finish_time = jobDoc.getString("finish_time");
-                            entity.owner = jobDoc.getString("owner");
-                            entity.jobid = jobDoc.getString("jobid");
-                            entity.extraid = extractId;
-                            jobInfoEntityList.add(entity);
+                            if (jobDoc.getString("owner").trim().equals(owner)){
+                                JobInfoEntity entity = new JobInfoEntity();
+                                entity.objectId = jobDoc.get("_id").toString();
+                                entity.calMethod = jobDoc.getString("calMethod");
+                                entity.calServer = jobDoc.getString("calServer");
+                                entity.create_time = jobDoc.getString("create_time");
+                                entity.finish_time = jobDoc.getString("finish_time");
+                                entity.owner = jobDoc.getString("owner");
+                                entity.jobid = jobDoc.getString("jobid");
+                                entity.extraid = extractId;
+                                jobInfoEntityList.add(entity);
+                            }
                         }
 
                     }

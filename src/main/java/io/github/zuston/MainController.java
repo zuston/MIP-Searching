@@ -24,9 +24,9 @@ public class MainController {
     private BaseServiceV2 baseServiceV2;
 
     @RequestMapping(value = "/m/s",method = RequestMethod.GET)
-    public String s(@RequestParam("expression")String expression,@RequestParam("page")int page,@RequestParam("computed")int flag){
+    public String s(@RequestParam("expression")String expression,@RequestParam("page")int page,@RequestParam("computed")int flag,@RequestParam("owner")String owner){
         expression = expression.replace("#","|");
-        return baseServiceV2.basicSearch(expression,page,flag);
+        return baseServiceV2.basicSearch(expression,page,flag, owner);
     }
 
     @RequestMapping(value = "/m/calculate",method = RequestMethod.GET)
