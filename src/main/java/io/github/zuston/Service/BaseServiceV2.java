@@ -271,22 +271,27 @@ public class BaseServiceV2 {
                         // 获取 jobId 来查找 jobinfo 的具体信息
                         ObjectId calculateMetaId = (ObjectId)document1.get("caculate_meta_id");
                         Document calculateDoc = caculateMetaCollection.find(new BasicDBObject("_id",calculateMetaId)).limit(1).first();
-                        String jobId = String.valueOf(calculateDoc.get("jobid"));
 
-                        Document jobDoc = jobInfoCollection.find(new BasicDBObject("jobid",jobId)).limit(1).first();
-                        if (jobDoc!=null) {
-                            if (jobDoc.getString("owner").trim().equals(owner)){
-                                JobInfoEntity entity = new JobInfoEntity();
-                                entity.objectId = jobDoc.get("_id").toString();
-                                entity.calMethod = jobDoc.getString("calMethod");
-                                entity.calServer = jobDoc.getString("calServer");
-                                entity.create_time = jobDoc.getString("create_time");
-                                entity.finish_time = jobDoc.getString("finish_time");
-                                entity.owner = jobDoc.getString("owner");
-                                entity.jobid = jobDoc.getString("jobid");
-                                entity.extraid = extractId;
-                                jobInfoEntityList.add(entity);
+                        try {
+                            String jobId = String.valueOf(calculateDoc.get("jobid"));
+
+                            Document jobDoc = jobInfoCollection.find(new BasicDBObject("jobid",jobId)).limit(1).first();
+                            if (jobDoc!=null) {
+                                if (jobDoc.getString("owner").trim().equals(owner)){
+                                    JobInfoEntity entity = new JobInfoEntity();
+                                    entity.objectId = jobDoc.get("_id").toString();
+                                    entity.calMethod = jobDoc.getString("calMethod");
+                                    entity.calServer = jobDoc.getString("calServer");
+                                    entity.create_time = jobDoc.getString("create_time");
+                                    entity.finish_time = jobDoc.getString("finish_time");
+                                    entity.owner = jobDoc.getString("owner");
+                                    entity.jobid = jobDoc.getString("jobid");
+                                    entity.extraid = extractId;
+                                    jobInfoEntityList.add(entity);
+                                }
                             }
+                        }catch (Exception e){
+                            logger.warn(e.getMessage());
                         }
 
                     }
@@ -307,7 +312,9 @@ public class BaseServiceV2 {
                                         entity.jobid,
                                         entity.extraid);
                             }
-                            extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
+                            if (!extractJobIdStr.substring(extractJobIdStr.length()-1).equals("[")){
+                                extractJobIdStr = extractJobIdStr.substring(0,extractJobIdStr.length()-1);
+                            }
                             extractJobIdStr += "]";
                         }catch (Exception e){
                             logger.warn("original_id={}",id);

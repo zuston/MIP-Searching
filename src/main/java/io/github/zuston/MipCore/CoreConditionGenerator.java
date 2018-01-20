@@ -191,7 +191,8 @@ public class CoreConditionGenerator {
             conditionChildren.append(QueryOperators.NIN,notInList);
         }
         if (conditionChildren.size()>0){
-            condition.put("pymatgen_poscar.structure.sites.label",conditionChildren);
+//            condition.put("pymatgen_poscar.structure.sites.label",conditionChildren);
+            condition.put("compound_components.element_name",conditionChildren);
         }
         if (flag==1){
             condition.put("is_computed",1);
